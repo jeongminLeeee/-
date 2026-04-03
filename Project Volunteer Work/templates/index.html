@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Constant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+    <!-- Header -->
+    <header class="bg-gray-400 shadow-sm p-4">
+        <h1 class="text-3xl font-bold">Constant</h1>
+    </header>
+
+    <div class="flex relative">
+
+        <!-- 🔥 사이드바 -->
+        <aside id="sidebar"
+            class="w-64 bg-white p-4 shadow-md h-screen transition-all duration-300 ease-in-out relative">
+
+            <!-- ✅ 중앙 직사각형 버튼 -->
+            <button onclick="toggleSidebar()"
+                class="absolute -right-4 top-1/2 -translate-y-1/2 bg-gray-400 hover:bg-gray-600 text-white w-8 h-12 rounded-md text-sm flex items-center justify-center shadow transition">
+                ‹‹
+            </button>
+
+            <div id="sidebarContent">
+
+                <div class="flex flex-col items-center gap-3 mt-3">
+
+                    {% if session.get("user") %}
+
+                    <div class="w-20 h-20 bg-gray-300 rounded-full"></div>
+                    <p class="font-semibold">{{ session["user"] }}</p>
+
+                    <a href="/logout">
+                        <button class="bg-red-500 text-white px-6 py-2 rounded-lg w-40">
+                            로그아웃
+                        </button>
+                    </a>
+
+                    {% else %}
+
+                    <a href="/login">
+                        <button class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg w-40 transition">
+                            로그인
+                        </button>
+                    </a>
+
+                    <a href="/signup">
+                        <button
+                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg w-40 transition">
+                            회원가입
+                        </button>
+                    </a>
+
+                    {% endif %}
+                </div>
+
+                <nav class="mt-6 border-t border-gray-400 pt-4">
+                    <ul class="space-y-3 text-gray-700">
+                        <a href="/">
+                            <li class="font-bold">🏠 홈</li>
+                        </a>
+                        <li class="font-bold">📅 일정표</li>
+                        <a href="/tasks">
+                            <li>- 수행평가</li>
+                        </a>
+                        <li>- 신청 날짜</li>
+                        <li>- 주요 행사</li>
+                        <a href="/my_calendar">
+                            <li class="mt-4 font-bold">📝 나의 캘린더</li>
+                        </a>
+                        <li class="mt-4 font-bold">⭐ 피드백</li>
+                    </ul>
+                </nav>
+
+            </div>
+
+        </aside>
+
+        <!-- Main -->
+        <main class="flex-1 p-6">
+
+            <!-- Notice -->
+            <section class="bg-white p-4 rounded-2xl shadow mb-6">
+                <h2 class="font-bold mb-2">📢 공지</h2>
+                <p class="text-gray-600">여기에 공지 내용이 표시됩니다.</p>
+            </section>
+
+            <!-- 소개 -->
+            <section class="bg-white p-4 rounded-2xl shadow mb-6">
+                <h2 class="font-bold mb-4">📚 사이트 소개</h2>
+
+                <div class="flex gap-4">
+                    <div class="w-1/2 h-40 bg-gray-200 rounded-lg flex items-center justify-center">
+                        이미지 영역
+                    </div>
+
+                    <div class="flex-1 space-y-2">
+                        <h5>안녕하세요. 저는 이정음입니다. 여러분의 일정 관리를 도와주는 사이트입니다.</h5>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Columns -->
+            <section class="grid grid-cols-2 gap-6">
+
+                <div class="bg-white p-4 rounded-2xl shadow">
+                    <h3 class="font-bold mb-2"> 📌 박채윤 part1</h3>
+                    <div class="h-40 bg-gray-200 rounded-lg flex items-center justify-center">
+                        이미지 영역
+                    </div>
+                    <p class="text-gray-600">곧 마감되는 일정 표시</p>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl shadow">
+                    <h3 class="font-bold mb-2"> 📌 박채윤 part2</h3>
+                    <div class="h-40 bg-gray-200 rounded-lg flex items-center justify-center">
+                        이미지 영역
+                    </div>
+                    <p class="text-gray-600">곧 마감되는 일정 표시</p>
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <!-- 🔥 JS -->
+    <script>
+        let isOpen = true;
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebarContent");
+            const button = sidebar.querySelector("button");
+
+            if (isOpen) {
+                // 접기
+                sidebar.style.width = "60px";
+                content.style.display = "none";
+                button.innerHTML = "››";
+            } else {
+                // 펼치기
+                sidebar.style.width = "256px";
+                content.style.display = "block";
+                button.innerHTML = "‹‹";
+            }
+
+            isOpen = !isOpen;
+        }
+    </script>
+
+</body>
+
+</html>

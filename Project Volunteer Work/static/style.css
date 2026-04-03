@@ -1,0 +1,57 @@
+/* style.css */
+
+/* 버튼 hover 애니메이션 강화 */
+button {
+    transition: all 0.2s ease-in-out;
+}
+
+/* 캘린더 오늘 날짜 강조 */
+.today {
+    background-color: #facc15;
+    /* Tailwind-yellow-400 */
+    font-weight: bold;
+    border-radius: 0.25rem;
+}
+
+/* 공휴일 표시 */
+.holiday {
+    color: #ef4444;
+    /* Tailwind-red-500 */
+    font-weight: bold;
+}
+
+/* 로그인 후 이용 문구 */
+.login-warning {
+    color: #ef4444;
+    /* Tailwind-red-500 */
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+
+/* 카드 그림자 강화 */
+.card {
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.holiday-name {
+    font-size: 0.6rem;
+    color: #b91c1c;
+    margin-top: 2px;
+    width: 100%;
+    text-align: right;
+}
+
+/* 세로 정렬 */
+.fc-daygrid-day-top {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 다른 달 흐리게 */
+.fc-day-other .holiday-name {
+    opacity: 0.4;
+}
