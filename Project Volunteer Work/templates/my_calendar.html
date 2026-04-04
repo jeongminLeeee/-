@@ -6,64 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Constant - 나의 캘린더</title>
 
-    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- FullCalendar -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-
-    <style>
-        /* 🔥 날짜 + 공휴일 구조 강제 고정 */
-        .fc .fc-daygrid-day-top {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 2px !important;
-        }
-
-        /* 🔥 날짜 숫자 줄 안 깨지게 */
-        .fc .fc-daygrid-day-number {
-            line-height: 1.2;
-        }
-
-        /* 🔥 공휴일 텍스트 */
-        .holiday-name {
-            display: block;
-            font-size: 0.65rem;
-            color: #b91c1c;
-            line-height: 1.2;
-            margin-top: 2px;
-            word-break: keep-all;
-            white-space: normal;
-            /* 🔥 줄바꿈 허용 */
-        }
-
-        /* 다른 달 */
-        .fc-day-other .holiday-name {
-            opacity: 0.4;
-        }
-
-        /* 오늘 */
-        .today {
-            background-color: #fef3c7 !important;
-            border-radius: 0.5rem;
-        }
-
-        /* 일정 */
-        .fc-event {
-            background-color: #3b82f6;
-            border: none;
-            border-radius: 6px;
-            padding: 2px;
-            font-size: 0.8rem;
-        }
-
-        /* 전체 크기 */
-        .fc {
-            width: 100% !important;
-        }
-    </style>
 </head>
 
 <body class="bg-gray-100 font-sans">
@@ -77,11 +22,10 @@
 
         <!-- 🔥 사이드바 -->
         <aside id="sidebar"
-            class="w-64 bg-white p-4 shadow-md h-screen transition-all duration-300 ease-in-out relative">
+            class="w-64 bg-white p-4 shadow-md min-h-screen sticky top-0 transition-all duration-300 ease-in-out relative">
 
-            <!-- ✅ 중앙 버튼 -->
             <button onclick="toggleSidebar()"
-                class="absolute -right-4 top-1/2 -translate-y-1/2 bg-gray-400 hover:bg-gray-600 text-white w-8 h-12 rounded-md text-sm flex items-center justify-center shadow transition">
+                class="absolute -right-4 top-1/2 -translate-y-1/2 bg-gray-400 hover:bg-gray-600 text-white w-8 h-12 rounded-md flex items-center justify-center shadow">
                 ‹‹
             </button>
 
@@ -120,30 +64,70 @@
                         </a>
                         <li>- 신청 날짜</li>
                         <li>- 주요 행사</li>
+                        <li class="font-bold">📝 나의 일정 관리</li>
                         <a href="/my_calendar">
-                            <li class="mt-4 font-bold">📝 나의 캘린더</li>
+                            <li>- 나의 캘린더</li>
+                        </a>
+                        <a href="/my_schedule">
+                            <li>- 나의 일정</li>
                         </a>
                         <li class="mt-4 font-bold">⭐ 피드백</li>
                     </ul>
                 </nav>
-
             </div>
         </aside>
 
-        <!-- Main -->
-        <main class="flex-1 p-6 transition-all duration-300 ease-in-out">
+        <!-- 🔥 메인 -->
+        <main class="flex-1 p-6 transition-all">
 
             <h1 class="text-3xl font-bold mb-6">🗓 나의 캘린더</h1>
 
-            <div class="bg-white p-6 rounded-2xl shadow-lg w-full">
-                <div id="calendar" class="w-full"></div>
+            <div class="flex justify-end items-center gap-3 mb-3">
+                <div id="loginError" class="text-red-500 text-sm hidden">
+                    로그인 후 이용 가능합니다
+                </div>
+                <button onclick="openForm()" class="bg-green-500 text-white px-4 py-2 rounded">
+                    + 일정 추가
+                </button>
+            </div>
+
+            <div class="bg-white p-4 rounded shadow">
+                <div id="calendar"></div>
             </div>
 
         </main>
+
     </div>
 
-    <!-- 🔥 사이드바 JS -->
+    <!-- 🔥 일정 추가 팝업 -->
+    <!-- 일정 추가 팝업 -->
+    <div id="scheduleForm"
+        class="hidden fixed top-1/4 left-1/2 -translate-x-1/2 bg-white p-6 shadow-lg rounded z-50 w-96">
+        <!-- 드래그 영역 -->
+        <div id="dragHeader" class="cursor-move font-bold mb-4">일정 추가</div>
+
+        <!-- 제목 -->
+        <input id="p_title" placeholder="제목" class="border p-2 w-full mb-2">
+
+        <!-- 날짜 -->
+        <div class="flex items-center gap-2 mb-2">
+            <input id="p_start" type="date" class="border p-2 w-full">
+            <span>~</span>
+            <input id="p_end" type="date" class="border p-2 w-full">
+        </div>
+
+        <!-- 내용 -->
+        <textarea id="p_desc" placeholder="내용" class="border p-2 w-full mb-2"></textarea>
+
+        <!-- 에러 메시지 -->
+        <div id="errorMsg" class="text-red-500 text-sm hidden mb-2"></div>
+
+        <!-- 저장 버튼 -->
+        <button onclick="addPersonalSchedule()" class="bg-blue-500 text-white w-full py-2 rounded">저장</button>
+    </div>
+
     <script>
+        const isLoggedIn = {{ 'true' if session.get("user") else 'false' }};
         let isOpen = true;
 
         function toggleSidebar() {
@@ -160,97 +144,114 @@
                 content.style.display = "block";
                 button.innerHTML = "‹‹";
             }
-
             isOpen = !isOpen;
-
-            // 🔥 사이드바 토글 후 달력 재조정
-            setTimeout(() => {
-                if (calendar) {
-                    calendar.updateSize();
-                }
-            }, 310);
         }
-    </script>
 
-    <!-- 🔥 캘린더 JS -->
-    <script>
-        let calendar;
-        let userEvents = [];
+        // 팝업 열기/닫기
+        function openForm() {
+            const error = document.getElementById("loginError");
+            if (!isLoggedIn) {
+                error.innerText = "로그인 후 이용 가능합니다";
+                error.classList.remove("hidden");
+                setTimeout(() => error.classList.add("hidden"), 2000);
+                return;
+            }
+            document.getElementById("scheduleForm").classList.remove("hidden");
+        }
 
-        // 🔥 서버에서 받은 공휴일
-        let holidays = {{ holidays | tojson }};
+        function closeForm() {
+            document.getElementById("scheduleForm").classList.add("hidden");
+        }
 
-        fetch("/get_user_tasks")
-            .then(res => res.json())
-            .then(data => {
-                userEvents = (data.tasks || []).map(task => ({
-                    title: task.title,
-                    start: task.date
-                }));
+        function showError(msg) {
+            const error = document.getElementById("errorMsg");
+            error.innerText = msg;
+            error.classList.remove("hidden");
+        }
+
+        // 일정 추가
+        function addPersonalSchedule() {
+            const title = document.getElementById("p_title").value.trim();
+            const start = document.getElementById("p_start").value;
+            let end = document.getElementById("p_end").value;
+            const description = document.getElementById("p_desc").value.trim();
+
+            const error = document.getElementById("errorMsg");
+            error.classList.add("hidden");
+            error.innerText = "";
+
+            if (!title) { showError("제목을 입력하세요"); return; }
+            if (!start) { showError("시작 날짜를 선택하세요"); return; }
+            if (!end) end = start;
+            if (new Date(start) > new Date(end)) { showError("시작 날짜는 종료 날짜보다 앞이어야 합니다"); return; }
+            if (!description) { showError("내용을 입력하세요"); return; }
+
+            fetch("/add_personal_schedule", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, start, end, description })
             })
-            .finally(() => initCalendar());
+                .then(res => res.json())
+                .then(() => location.reload());
+        }
 
+        // 캘린더
+        let calendar;
         function initCalendar() {
             const calendarEl = document.getElementById('calendar');
-
             calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 locale: 'ko',
-                height: "auto",
-                contentHeight: "auto",
-                events: userEvents,
-
-                // 날짜 숫자만
-                dayCellContent: function (arg) {
-                    return arg.date.getDate();
-                },
-
-                // 🔥 연도 바뀌면 공휴일 다시 가져오기
-                datesSet: function (info) {
-                    const year = info.start.getFullYear();
-
-                    fetch(`/get_holidays?year=${year}`)
+                events: function (fetchInfo, successCallback) {
+                    fetch("/get_user_tasks")
                         .then(res => res.json())
                         .then(data => {
-                            holidays = data;
-                            calendar.render();
+                            let tasks = (data.tasks || []).map(t => ({
+                                title: t.title,
+                                start: t.date,
+                                color: "#3b82f6"
+                            }));
+                            return fetch("/get_personal_schedule")
+                                .then(res => res.json())
+                                .then(personal => {
+                                    let personalEvents = personal.map(p => ({
+                                        title: p.title,
+                                        start: p.start,
+                                        end: p.end,
+                                        color: "#10b981"
+                                    }));
+                                    successCallback([...tasks, ...personalEvents]);
+                                });
                         });
-                },
+                }
+            });
+            calendar.render();
+        }
 
-                // 🔥 날짜 + 공휴일 표시
-                dayCellDidMount: function (info) {
-                    const date = info.date;
-                    const day = date.getDay();
-                    let color = "";
+        // 드래그
+        document.addEventListener("DOMContentLoaded", () => {
+            initCalendar();
 
-                    if (day === 6) color = '#1e3a8a';
-                    if (day === 0) color = '#b91c1c';
+            const form = document.getElementById("scheduleForm");
+            const header = document.getElementById("dragHeader");
+            let isDragging = false, offsetX, offsetY;
 
-                    const dateStr =
-                        date.getFullYear() + '-' +
-                        String(date.getMonth() + 1).padStart(2, '0') + '-' +
-                        String(date.getDate()).padStart(2, '0');
+            header.addEventListener("mousedown", e => {
+                isDragging = true;
+                offsetX = e.clientX - form.offsetLeft;
+                offsetY = e.clientY - form.offsetTop;
+            });
 
-                    if (holidays[dateStr]) color = '#b91c1c';
-                    if (color) info.el.style.color = color;
-
-                    if (holidays[dateStr]) {
-                        const span = document.createElement("div");
-                        span.className = "holiday-name";
-                        span.innerText = holidays[dateStr];
-
-                        // 🔥 핵심 (날짜 바로 아래)
-                        const top = info.el.querySelector('.fc-daygrid-day-top');
-
-                        if (top) {
-                            top.appendChild(span);
-                        }
-                    }
+            document.addEventListener("mousemove", e => {
+                if (isDragging) {
+                    form.style.left = (e.clientX - offsetX) + "px";
+                    form.style.top = (e.clientY - offsetY) + "px";
+                    form.style.transform = "none";
                 }
             });
 
-            calendar.render();
-        }
+            document.addEventListener("mouseup", () => isDragging = false);
+        });
     </script>
 
 </body>

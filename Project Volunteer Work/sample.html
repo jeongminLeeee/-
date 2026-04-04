@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>내 일정</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+    <!-- Header -->
+    <header class="bg-gray-400 shadow-sm p-4">
+        <h1 class="text-3xl font-bold">Constant</h1>
+    </header>
+
+    <div class="flex">
+
+        <!-- 🔥 사이드바 -->
+        <aside id="sidebar"
+            class="w-64 bg-white p-4 shadow-md h-[calc(100vh-80px)] sticky top-[80px] transition-all duration-300 relative overflow-y-auto">
+
+            <!-- 버튼 -->
+            <button onclick="toggleSidebar()"
+                class="absolute -right-4 top-1/2 -translate-y-1/2 bg-gray-400 hover:bg-gray-600 text-white w-8 h-12 rounded-md flex items-center justify-center shadow">
+                ‹‹
+            </button>
+
+            <div id="sidebarContent">
+
+                <!-- 로그인 영역 -->
+                <div class="flex flex-col items-center gap-3 mt-3">
+
+                    {% if session.get("user") %}
+                    <div class="w-20 h-20 bg-gray-300 rounded-full"></div>
+                    <p class="font-semibold">{{ session["user"] }}</p>
+
+                    <a href="/logout">
+                        <button class="bg-red-500 text-white px-6 py-2 rounded-lg w-40">
+                            로그아웃
+                        </button>
+                    </a>
+
+                    {% else %}
+                    <a href="/login">
+                        <button class="bg-blue-500 text-white px-6 py-2 rounded-lg w-40">
+                            로그인
+                        </button>
+                    </a>
+
+                    <a href="/signup">
+                        <button class="bg-gray-200 px-6 py-2 rounded-lg w-40">
+                            회원가입
+                        </button>
+                    </a>
+                    {% endif %}
+
+                </div>
+
+                <!-- 메뉴 -->
+                <nav class="mt-6 border-t border-gray-400 pt-4">
+                    <ul class="space-y-3 text-gray-700">
+                        <a href="/">
+                            <li class="font-bold">🏠 홈</li>
+                        </a>
+                        <li class="font-bold">📅 일정표</li>
+                        <a href="/tasks">
+                            <li>- 수행평가</li>
+                        </a>
+
+                        <li class="font-bold mt-4">📝 나의 일정 관리</li>
+                        <a href="/my_calendar">
+                            <li>- 나의 캘린더</li>
+                        </a>
+                        <a href="/my_schedule">
+                            <li>- 나의 일정</li>
+                        </a>
+
+                        <li class="mt-4 font-bold">⭐ 피드백</li>
+                    </ul>
+                </nav>
+
+            </div>
+
+        </aside>
+
+        <!-- 🔥 메인 -->
+        <main class="flex-1 p-6 relative z-50">
+
+            <!-- 상단: 제목 + 검색/필터 -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+
+                <!-- 제목 -->
+                <h1 class="text-2xl font-bold">📋 내 일정</h1>
+
+                <!-- 검색 + 필터 영역 -->
+                <div class="flex items-center gap-2 w-full md:w-auto">
+
+                    <!-- 검색창 -->
+                    <input id="search" placeholder="검색..."
+                        class="border p-2 rounded flex-1 md:flex-none w-full md:w-64">
+
+                    <!-- 검색 버튼 -->
+                    <button id="searchBtn" class="bg-blue-500 text-white px-4 py-2 rounded shadow">
+                        검색
+                    </button>
+
+                    <!-- 필터 버튼 + 체크박스 -->
+                    <div class="relative">
+                        <button onclick="toggleFilter()" id="filterBtn"
+                            class="border px-4 py-2 rounded bg-white shadow">
+                            전체
+                        </button>
+
+                        <div id="filterBox"
+                            class="hidden absolute right-0 mt-2 bg-white border rounded shadow p-3 w-40 z-50">
+
+                            <label class="flex items-center gap-2 mb-2">
+                                <input type="checkbox" value="task" checked>
+                                수행평가
+                            </label>
+
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" value="personal" checked>
+                                개인 일정
+                            </label>
+
+                            <!-- 필터 적용 버튼 -->
+                            <button onclick="applyFilters()" class="mt-2 w-full bg-gray-300 px-3 py-1 rounded">
+                                적용
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 📋 일정 리스트 -->
+            <div id="list" class="space-y-3">
+
+                {% for s in schedules %}
+                <div class="bg-white p-4 rounded-xl shadow flex justify-between items-center" data-type="{{ s.type }}"
+                    data-date="{{ s.date }}">
+
+                    <!-- 왼쪽 -->
+                    <div class="flex items-center gap-3">
+                        <div class="w-3 h-3 rounded-full" style="background: {{ s.color }}"></div>
+
+                        <div>
+                            <p class="font-bold">{{ s.title }}</p>
+                            <p class="text-sm text-gray-500">
+                                {{ s.date }}
+                                {% if s.end %} ~ {{ s.end }} {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 오른쪽 버튼 -->
+                    <div class="flex gap-2">
+
+                        {% if s.type == "task" %}
+
+                        <button onclick="location.href='/task/{{ s.id }}'" class="bg-gray-300 px-3 py-1 rounded">
+                            자세히 보기
+                        </button>
+
+                        <button onclick="deleteTask('{{ s.id }}')" class="bg-red-500 text-white px-3 py-1 rounded">
+                            삭제
+                        </button>
+
+                        {% else %}
+
+                        <button class="bg-gray-300 px-3 py-1 rounded">
+                            자세히 보기
+                        </button>
+
+                        <button onclick="deleteSchedule('{{ s.id }}')" class="bg-red-500 text-white px-3 py-1 rounded">
+                            삭제
+                        </button>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+                {% endfor %}
+
+            </div>
+
+        </main>
+
+    </div>
+
+    <!-- 🔥 JS -->
+    <script>
+        // 🔄 필터 + 검색 (🔥 밖으로 빼기)
+        function applyFilters() {
+            const checked = Array.from(document.querySelectorAll("#filterBox input:checked")).map(i => i.value);
+            const searchVal = document.getElementById("search").value.toLowerCase();
+
+            document.querySelectorAll("#list > div").forEach(item => {
+                const matchesFilter = checked.includes(item.dataset.type);
+                const matchesSearch = item.innerText.toLowerCase().includes(searchVal);
+                item.style.display = (matchesFilter && matchesSearch) ? "flex" : "none";
+            });
+
+            const btn = document.getElementById("filterBtn");
+            if (checked.length === 2) btn.innerText = "전체";
+            else if (checked.length === 1)
+                btn.innerText = checked[0] === "task" ? "수행평가" : "개인 일정";
+            else btn.innerText = "없음";
+        }
+
+        // 🔽 필터 토글
+        function toggleFilter() {
+            document.getElementById("filterBox").classList.toggle("hidden");
+        }
+
+        // ❌ 개인 일정 삭제
+        function deleteSchedule(id) {
+            console.log("개인 삭제:", id);
+
+            fetch("/delete_personal_schedule", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ id: id })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    console.log("응답:", data);
+                    location.reload();
+                })
+                .catch(err => console.error(err));
+        }
+
+        // ❌ 수행평가 삭제
+        function deleteTask(id) {
+            console.log("수행 삭제:", id);
+
+            fetch("/delete_task", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ id: id })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    console.log("응답:", data);
+                    location.reload();
+                })
+                .catch(err => console.error(err));
+        }
+
+        // 🔄 날짜 정렬
+        function sortByDate() {
+            let items = Array.from(document.querySelectorAll("#list > div"));
+            items.sort((a, b) => new Date(a.dataset.date) - new Date(b.dataset.date));
+
+            const list = document.getElementById("list");
+            list.innerHTML = "";
+            items.forEach(i => list.appendChild(i));
+        }
+
+        // 🔥 페이지 로드 후 실행
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById("searchBtn")?.addEventListener("click", applyFilters);
+
+            document.getElementById("search")?.addEventListener("keydown", e => {
+                if (e.key === "Enter") applyFilters();
+            });
+
+            document.getElementById("search")?.addEventListener("input", applyFilters);
+
+            sortByDate();
+        });
+
+        // 🔥 사이드바
+        let isOpen = true;
+        function toggleSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebarContent");
+
+            if (isOpen) {
+                sidebar.style.width = "60px";
+                content.style.display = "none";
+            } else {
+                sidebar.style.width = "256px";
+                content.style.display = "block";
+            }
+
+            isOpen = !isOpen;
+        }
+    </script>
+
+</body>
+
+</html>
