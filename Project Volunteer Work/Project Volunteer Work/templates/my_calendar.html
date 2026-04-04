@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Constant - 나의 캘린더</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+    <!-- Header -->
+    <header class="bg-gray-400 shadow-sm p-4 flex justify-between items-center">
+        <h1 class="text-3xl font-bold">Constant</h1>
+    </header>
+
+    <div class="flex relative">
+
+        <!-- 🔥 사이드바 -->
+        <aside id="sidebar"
+            class="w-64 bg-white p-4 shadow-md min-h-screen sticky top-0 transition-all duration-300 ease-in-out relative">
+
+            <button onclick="toggleSidebar()"
+                class="absolute -right-4 top-1/2 -translate-y-1/2 bg-gray-400 hover:bg-gray-600 text-white w-8 h-12 rounded-md flex items-center justify-center shadow">
+                ‹‹
+            </button>
+
+            <div id="sidebarContent">
+                <div class="flex flex-col items-center gap-3 mt-3">
+                    {% if session.get("user") %}
+                    <div class="w-20 h-20 bg-gray-300 rounded-full"></div>
+                    <p class="font-semibold">{{ session["user"] }}</p>
+                    <a href="/logout">
+                        <button class="bg-red-500 text-white px-6 py-2 rounded-lg w-40">
+                            로그아웃
+                        </button>
+                    </a>
+                    {% else %}
+                    <a href="/login">
+                        <button class="bg-blue-500 text-white px-6 py-2 rounded-lg w-40">
+                            로그인
+                        </button>
+                    </a>
+                    <a href="/signup">
+                        <button class="bg-gray-200 px-6 py-2 rounded-lg w-40">
+                            회원가입
+                        </button>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <nav class="mt-6 border-t border-gray-400 pt-4">
+                    <ul class="space-y-3 text-gray-700">
+                        <a href="/">
+                            <li class="font-bold">🏠 홈</li>
+                        </a>
+                        <li class="font-bold">📅 일정표</li>
+                        <a href="/tasks">
+                            <li>- 수행평가</li>
+                        </a>
+                        <a href="/tasks">
+                            <li>- 주요행사</li>
+                        </a>
+
+                        <li class="font-bold">📝 나의 일정 관리</li>
+                        <a href="/my_calendar">
+                            <li>- 나의 캘린더</li>
+                        </a>
+                        <a href="/my_schedule">
+                            <li>- 나의 일정</li>
+                        </a>
+                        <li class="mt-4 font-bold">⭐ 피드백</li>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- 🔥 메인 -->
+        <main class="flex-1 p-6 transition-all">
+
+            <h1 class="text-3xl font-bold mb-6">🗓 나의 캘린더</h1>
+
+            <div class="flex justify-end items-center gap-3 mb-3">
+                <div id="loginError" class="text-red-500 text-sm hidden">
+                    로그인 후 이용 가능합니다
+                </div>
+                <button onclick="openForm()" class="bg-green-500 text-white px-4 py-2 rounded">
+                    + 일정 추가
+                </button>
+            </div>
+
+            <div class="bg-white p-4 rounded shadow">
+                <div id="calendar"></div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <!-- 🔥 일정 추가 / 수정 팝업 -->
+    <div id="scheduleForm"
+        class="hidden fixed top-1/4 left-1/2 -translate-x-1/2 bg-white p-6 shadow-lg rounded z-50 w-96">
+
+        <!-- 드래그 영역 -->
+        <div id="dragHeader" class="cursor-move font-bold mb-4 text-lg">
+            일정 추가
+        </div>
+
+        <!-- 제목 -->
+        <input id="p_title" placeholder="제목" class="border p-2 w-full mb-2 rounded">
+
+        <!-- 날짜 -->
+        <div class="flex items-center gap-2 mb-2">
+            <input id="p_start" type="date" class="border p-2 w-full rounded">
+
+            <span>~</span>
+
+            <input id="p_end" type="date" class="border p-2 w-full rounded">
+        </div>
+
+        <!-- 내용 -->
+        <textarea id="p_desc" placeholder="내용" class="border p-2 w-full mb-2 rounded"></textarea>
+
+        <!-- 에러 메시지 -->
+        <div id="errorMsg" class="text-red-500 text-sm hidden mb-2"></div>
+
+        <!-- 버튼 -->
+        <div class="flex gap-2 justify-end mt-4">
+
+            <button id="saveBtn" onclick="addPersonalSchedule()"
+                class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+
+                저장
+
+            </button>
+
+            <button onclick="closeForm()" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">
+
+                취소
+
+            </button>
+
+        </div>
+    </div>
+
+
+    <!-- 🔥 일정 클릭 시 회색 메뉴 -->
+    <div id="eventMenu" class="hidden fixed bg-gray-100 shadow-lg rounded-lg p-2 z-50 w-28 flex flex-col">
+
+        <button id="deleteBtn" class="w-full text-left px-3 py-2 hover:bg-gray-200 rounded">
+
+            삭제
+
+        </button>
+
+        <button id="editBtn" class="w-full text-left px-3 py-2 hover:bg-gray-200 rounded">
+
+            수정
+
+        </button>
+
+    </div>
+
+    <script>
+        const isLoggedIn = {{ 'true' if session.get("user") else 'false' }};
+        let isOpen = true;
+        let selectedEvent = null;
+        let editingId = null;
+        let calendar;
+
+        // 일정 옆 회색 메뉴
+        function openEventMenu(event, x, y) {
+
+            selectedEvent = event;
+
+            const menu = document.getElementById("eventMenu");
+            const deleteBtn = document.getElementById("deleteBtn");
+            const editBtn = document.getElementById("editBtn");
+
+            menu.style.left = x + "px";
+            menu.style.top = y + "px";
+            menu.classList.remove("hidden");
+
+            // 수행평가면 수정 숨김
+            if (event.extendedProps.type === "task") {
+                editBtn.style.display = "none";
+            } else {
+                editBtn.style.display = "block";
+            }
+
+            deleteBtn.onclick = function (e) {
+
+                e.stopPropagation();
+
+                if (event.extendedProps.type === "personal") {
+                    deletePersonal(event.id);
+                } else {
+                    deleteTask(event.id);
+                }
+
+                menu.classList.add("hidden");
+            };
+
+            editBtn.onclick = function (e) {
+
+                e.stopPropagation();
+
+                menu.classList.add("hidden");
+                openEditForm(event);
+            };
+        }
+
+        // 화면 클릭하면 메뉴 닫기 (메뉴 내부 클릭 제외)
+        document.addEventListener("click", function (e) {
+
+            const menu = document.getElementById("eventMenu");
+
+            if (!menu) return;
+
+            if (!menu.contains(e.target)) {
+                menu.classList.add("hidden");
+            }
+        });
+
+        function toggleSidebar() {
+
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebarContent");
+            const button = sidebar.querySelector("button");
+
+            if (isOpen) {
+                sidebar.style.width = "60px";
+                content.style.display = "none";
+                button.innerHTML = "››";
+            } else {
+                sidebar.style.width = "256px";
+                content.style.display = "block";
+                button.innerHTML = "‹‹";
+            }
+
+            isOpen = !isOpen;
+        }
+
+        // 일정 추가 폼 열기
+        function openForm() {
+
+            const error = document.getElementById("loginError");
+
+            if (!isLoggedIn) {
+                error.innerText = "로그인 후 이용 가능합니다";
+                error.classList.remove("hidden");
+                setTimeout(() => error.classList.add("hidden"), 2000);
+                return;
+            }
+
+            editingId = null;
+
+            document.getElementById("p_title").value = "";
+            document.getElementById("p_start").value = "";
+            document.getElementById("p_end").value = "";
+            document.getElementById("p_desc").value = "";
+
+            document.getElementById("saveBtn").innerText = "저장";
+
+            document.getElementById("scheduleForm")
+                .classList.remove("hidden");
+        }
+
+        function closeForm() {
+            document.getElementById("scheduleForm")
+                .classList.add("hidden");
+        }
+
+        function showError(msg) {
+
+            const error = document.getElementById("errorMsg");
+
+            error.innerText = msg;
+            error.classList.remove("hidden");
+        }
+
+        // 일정 저장 (추가 + 수정)
+        function addPersonalSchedule() {
+
+            const title = document.getElementById("p_title").value.trim();
+            const start = document.getElementById("p_start").value;
+            let end = document.getElementById("p_end").value;
+            const description = document.getElementById("p_desc").value.trim();
+
+            const error = document.getElementById("errorMsg");
+            error.classList.add("hidden");
+
+            if (!title) {
+                showError("제목을 입력하세요");
+                return;
+            }
+
+            if (!start) {
+                showError("시작 날짜를 선택하세요");
+                return;
+            }
+
+            if (!end) end = start;
+
+            if (new Date(start) > new Date(end)) {
+                showError("시작 날짜는 종료 날짜보다 앞이어야 합니다");
+                return;
+            }
+
+            if (!description) {
+                showError("내용을 입력하세요");
+                return;
+            }
+
+            let url = "/add_personal_schedule";
+
+            if (editingId) {
+                url = "/update_personal_schedule";
+            }
+
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: editingId,
+                    title,
+                    start,
+                    end,
+                    description
+                })
+            })
+                .then(res => res.json())
+                .then(() => location.reload());
+        }
+
+        // 개인 일정 삭제
+        function deletePersonal(id) {
+
+            fetch("/delete_personal_schedule", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: id })
+            })
+                .then(res => res.json())
+                .then(() => location.reload());
+        }
+
+        // 수행평가 삭제
+        function deleteTask(id) {
+
+            fetch("/delete_task", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: id })
+            })
+                .then(res => res.json())
+                .then(() => location.reload());
+        }
+
+        // 수정 폼 열기
+        function openEditForm(event) {
+
+            document.getElementById("scheduleForm")
+                .classList.remove("hidden");
+
+            document.getElementById("p_title").value = event.title;
+            document.getElementById("p_start").value = event.startStr;
+
+            if (event.endStr) {
+
+                let endDate = new Date(event.endStr);
+                endDate.setDate(endDate.getDate() - 1);
+
+                document.getElementById("p_end").value =
+                    endDate.toISOString().split("T")[0];
+            }
+
+            document.getElementById("p_desc").value =
+                event.extendedProps.description || "";
+
+            editingId = event.id;
+
+            document.getElementById("saveBtn").innerText = "수정";
+        }
+
+        // 캘린더
+        function initCalendar() {
+
+            const calendarEl = document.getElementById("calendar");
+
+            calendar = new FullCalendar.Calendar(calendarEl, {
+
+                initialView: "dayGridMonth",
+                locale: "ko",
+
+                events: function (fetchInfo, successCallback) {
+
+                    fetch("/get_user_tasks")
+                        .then(res => res.json())
+                        .then(data => {
+
+                            let tasks = (data.tasks || []).map(t => ({
+                                id: t.id,
+                                title: t.title,
+                                start: t.date,
+                                color: "#3b82f6",
+                                type: "task"
+                            }));
+
+                            return fetch("/get_personal_schedule")
+                                .then(res => res.json())
+                                .then(personal => {
+
+                                    let personalEvents = personal.map(p => {
+
+                                        let endDate = new Date(p.end);
+                                        endDate.setDate(endDate.getDate() + 1);
+
+                                        return {
+                                            id: p.id,
+                                            title: p.title,
+                                            start: p.start,
+                                            end: endDate.toISOString().split("T")[0],
+                                            color: "#10b981",
+                                            type: "personal",
+                                            description: p.description
+                                        };
+                                    });
+
+                                    successCallback([
+                                        ...tasks,
+                                        ...personalEvents
+                                    ]);
+                                });
+                        });
+                },
+
+                eventClick: function (info) {
+
+                    const event = info.event;
+                    const jsEvent = info.jsEvent;
+
+                    jsEvent.preventDefault();
+                    jsEvent.stopPropagation();
+
+                    openEventMenu(
+                        event,
+                        jsEvent.pageX,
+                        jsEvent.pageY
+                    );
+                }
+
+            });
+
+            calendar.render();
+        }
+
+        // 드래그
+        document.addEventListener("DOMContentLoaded", () => {
+
+            initCalendar();
+
+            const form = document.getElementById("scheduleForm");
+            const header = document.getElementById("dragHeader");
+
+            if (!form || !header) return;
+
+            let isDragging = false;
+            let offsetX;
+            let offsetY;
+
+            header.addEventListener("mousedown", e => {
+
+                isDragging = true;
+
+                offsetX = e.clientX - form.offsetLeft;
+                offsetY = e.clientY - form.offsetTop;
+            });
+
+            document.addEventListener("mousemove", e => {
+
+                if (isDragging) {
+
+                    form.style.left =
+                        (e.clientX - offsetX) + "px";
+
+                    form.style.top =
+                        (e.clientY - offsetY) + "px";
+
+                    form.style.transform = "none";
+                }
+            });
+
+            document.addEventListener("mouseup", () => {
+                isDragging = false;
+            });
+
+        });
+    </script>
+</body>
+
+
+</html>
