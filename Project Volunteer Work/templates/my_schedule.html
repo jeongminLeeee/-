@@ -125,10 +125,11 @@
 
             {% if s.type == "task" %}
 
-            <button onclick="location.href='/task/{{ s.id }}'"
-                class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg">
-                자세히 보기
-            </button>
+            <a href="/task/{{ s.id }}?from=my_schedule">
+                <button class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg">
+                    자세히 보기
+                </button>
+            </a>
 
             <button onclick="deleteTask({{ s.id }})"
                 class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
@@ -337,3 +338,5 @@
 
 </script>
 {% endblock %}
+
+</html>

@@ -19,8 +19,13 @@
             <div id="sidebarContent">
                 <div class="flex flex-col items-center gap-3 mt-3">
                     {% if session.get("user") %}
-                    <div class="w-20 h-20 bg-gray-300 rounded-full"></div>
-                    <p class="font-semibold">{{ session["user"] }}</p>
+                    <!-- 프로필 이미지 -->
+                    <img id="profileImg" src="/static/{{ profile.get(session['user'], 'daesang_1.png') }}"
+                        class="w-20 h-20 rounded-full cursor-pointer border-2 border-gray-300"
+                        onclick="openProfileSelect()" />
+
+                    <p class="font-semibold">{{ session['user'] }}</p>
+
                     <a href="/logout">
                         <button class="bg-red-500 text-white px-6 py-2 rounded-lg w-40">
                             로그아웃
@@ -52,7 +57,6 @@
                         <a href="/tasks">
                             <li>- 주요행사</li>
                         </a>
-
                         <li class="font-bold">📝 나의 일정 관리</li>
                         <a href="/my_calendar">
                             <li>- 나의 캘린더</li>
@@ -71,9 +75,25 @@
             {% block content %}{% endblock %}
         </main>
 
-
     </div>
-    {% block other %}{% endblock %}
+
+    <!-- 프로필 선택 모달 -->
+    {% if session.get("user") %}
+    <div id="profileModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg flex flex-col items-center gap-4">
+            <h2 class="text-xl font-bold mb-2">프로필 선택</h2>
+            <div class="flex gap-4">
+                <img src="/static/daesang_1.png" class="w-20 h-20 rounded-full cursor-pointer"
+                    onclick="selectProfile('daesang_1.png')">
+                <img src="/static/daesang_2.png" class="w-20 h-20 rounded-full cursor-pointer"
+                    onclick="selectProfile('daesang_2.png')">
+                <img src="/static/daesang_3.png" class="w-20 h-20 rounded-full cursor-pointer"
+                    onclick="selectProfile('daesang_3.png')">
+            </div>
+            <button onclick="closeProfileModal()" class="mt-4 px-4 py-2 bg-gray-300 rounded">취소</button>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- 공통 JS -->
     <script>
@@ -94,6 +114,31 @@
             }
 
             isOpen = !isOpen;
+        }
+
+        function openProfileSelect() {
+            document.getElementById("profileModal").classList.remove("hidden");
+        }
+
+        function closeProfileModal() {
+            document.getElementById("profileModal").classList.add("hidden");
+        }
+
+        function selectProfile(imgName) {
+            fetch("/update_profile", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ "img": imgName })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById("profileImg").src = "/static/" + imgName;
+                        closeProfileModal();
+                    } else {
+                        alert(data.msg || "프로필 업데이트 실패");
+                    }
+                });
         }
     </script>
 

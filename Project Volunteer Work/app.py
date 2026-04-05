@@ -23,7 +23,50 @@ for f, default in [
             json.dump(default, file, ensure_ascii=False, indent=4)
 
 
+def load_profiles():
+    """
+    profile.json을 읽어서 딕셔너리 반환.
+    파일이 없거나 잘못된 경우 빈 딕셔너리 반환
+    """
+    try:
+        with open(PROFILE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
+# -----------------------------
+# 모든 템플릿에 profile 자동 주입
+# -----------------------------
+@app.context_processor
+def inject_profile():
+    """
+    Jinja2 템플릿에서 {{ profile }} 사용 가능
+    예: {{ profile.get(session['user'], '기본이미지.png') }}
+    """
+    profile = load_profiles()
+    return dict(profile=profile)
+
+# -----------------------------
+# 프로필 업데이트 API
+# -----------------------------
+from flask import request, jsonify
+
+@app.route("/update_profile", methods=["POST"])
+def update_profile():
+    if "user" not in session:
+        return jsonify({"success": False, "msg": "로그인 필요"}), 401
+
+    user = session["user"]
+    data = request.get_json()
+    img = data.get("img")
+
+    profiles = load_profiles()
+    profiles[user] = img
+
+    with open(PROFILE_FILE, "w", encoding="utf-8") as f:
+        json.dump(profiles, f, ensure_ascii=False, indent=4)
+
+    return jsonify({"success": True})
 
 # 🔥 내 일정 페이지
 # -----------------------------
