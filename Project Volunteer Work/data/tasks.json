@@ -1,8 +1,18 @@
 [
     {
+        "id": 3,
+        "grade": 2,
+        "class": "1",
+        "subject": "정보",
+        "title": "정보 보고서",
+        "date": "2026-04-10",
+        "context": "보고서",
+        "img": ""
+    },
+    {
         "id": 1,
         "grade": 2,
-        "class": 1,
+        "class": "A",
         "subject": "과학",
         "title": "과학 보고서",
         "date": "2026-04-08",
@@ -12,7 +22,7 @@
     {
         "id": 2,
         "grade": 2,
-        "class": 1,
+        "class": "1",
         "subject": "수학",
         "title": "수학 과제",
         "date": "2026-04-10",
