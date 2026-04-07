@@ -62,7 +62,7 @@
                 <nav class="mt-6 border-t border-gray-400 pt-4">
                     <ul class="space-y-3 text-gray-700">
                         <a href="/">
-                            <li class="font-bold">🏠 홈</li>
+                            <li li class="mt-4 font-bold cursor-pointer hover:text-blue-500">🏠 홈</li>
                         </a>
                         <li class="font-bold">📅 일정표</li>
                         <a href="/tasks">
@@ -78,7 +78,11 @@
                         <a href="/my_schedule">
                             <li>- 나의 일정</li>
                         </a>
-                        <li class="mt-4 font-bold">⭐ 피드백</li>
+                        <a href="/chat">
+                            <li class="mt-4 font-bold cursor-pointer hover:text-blue-500">
+                                ⭐ 피드백
+                            </li>
+                        </a>
                     </ul>
                 </nav>
             </div>
@@ -101,6 +105,43 @@
             <div class="bg-white p-4 rounded shadow">
                 <div id="calendar"></div>
             </div>
+
+            {% if session.get("user") %}
+            <!-- 🔥 플로팅 버튼 -->
+            <div class="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
+
+                <!-- 글쓰기 -->
+                <button onclick="openWriteModal()"
+                    class="bg-blue-500 text-white px-4 py-3 rounded-full shadow-lg hover:bg-blue-600">
+                    ✏️ 글쓰기
+                </button>
+
+                <!-- 내 글 보기 -->
+                <button onclick="showMyPosts()"
+                    class="bg-gray-700 text-white px-4 py-3 rounded-full shadow-lg hover:bg-gray-800">
+                    👤 내 글
+                </button>
+                <div id="writeModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+
+                    <div class="bg-white p-6 rounded-xl w-80">
+                        <h2 class="text-lg font-bold mb-3">리뷰 작성</h2>
+
+                        <textarea id="writeContent" class="w-full border rounded p-2 mb-3"
+                            placeholder="내용 입력..."></textarea>
+
+                        <div class="flex justify-end gap-2">
+                            <button onclick="closeWriteModal()" class="px-3 py-1 bg-gray-300 rounded">
+                                취소
+                            </button>
+                            <button onclick="submitPost()" class="px-3 py-1 bg-blue-500 text-white rounded">
+                                등록
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            {% endif %}
 
         </main>
         {% if session.get("user") %}
@@ -501,7 +542,52 @@
                 isDragging = false;
             });
 
+
         });
+        function openWriteModal() {
+            document.getElementById("writeModal").classList.remove("hidden");
+        }
+
+        function closeWriteModal() {
+            document.getElementById("writeModal").classList.add("hidden");
+        }
+
+        // 글 작성
+        function submitPost() {
+            const content = document.getElementById("writeContent").value;
+
+            fetch("/add_post", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ content: content })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert("실패");
+                    }
+                });
+        }
+
+        // 내 글만 보기
+        function showMyPosts() {
+            const myName = "{{ session.get('user') }}";
+            const items = document.querySelectorAll("#feed > div");
+
+            items.forEach(el => {
+                const user = el.querySelector(".font-semibold").innerText;
+
+                if (user === myName) {
+                    el.style.display = "block";
+                } else {
+                    el.style.display = "none";
+                }
+            });
+        }
     </script>
     <script>
         let isOpen = true;

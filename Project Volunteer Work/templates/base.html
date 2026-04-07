@@ -48,7 +48,7 @@
                 <nav class="mt-6 border-t border-gray-400 pt-4">
                     <ul class="space-y-3 text-gray-700">
                         <a href="/">
-                            <li class="font-bold">🏠 홈</li>
+                            <li li class="mt-4 font-bold cursor-pointer hover:text-blue-500">🏠 홈</li>
                         </a>
                         <li class="font-bold">📅 일정표</li>
                         <a href="/tasks">
@@ -64,7 +64,11 @@
                         <a href="/my_schedule">
                             <li>- 나의 일정</li>
                         </a>
-                        <li class="mt-4 font-bold">⭐ 피드백</li>
+                        <a href="/chat">
+                            <li class="mt-4 font-bold cursor-pointer hover:text-blue-500">
+                                ⭐ 피드백
+                            </li>
+                        </a>
                     </ul>
                 </nav>
             </div>
@@ -145,5 +149,3 @@
     {% block script %}{% endblock %}
 
 </body>
-
-</html>

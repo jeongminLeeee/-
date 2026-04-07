@@ -10,6 +10,7 @@ TASK_FILE = "data/tasks.json"
 USER_CAL_FILE = "data/user_calendar.json"
 USER_SCHEDULE_FILE = "data/user_schedule.json"
 PROFILE_FILE = "data/profile.json"
+CHAT_PATH = "data/chat.json"
 # 폴더 자동 생성
 os.makedirs("data", exist_ok=True)
 
@@ -565,7 +566,269 @@ def task_detail(task_id):
     prev = request.args.get("from", "tasks")
 
     return render_template("task_detail.html", task=task, prev=prev)
-# -----------------------------
+
+
+
+
+
+# ---( 리뷰)--------------------------
+
+
+def load_chat():
+    if not os.path.exists(CHAT_PATH):
+        return {}
+    with open(CHAT_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_chat(data):
+    with open(CHAT_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+# -------------------------
+# 채팅 / 댓글 분리
+# -------------------------
+def split_chat(comments):
+    main = []
+    replies = {}
+
+    for c in comments:
+        cid, parent, content = c
+
+        if parent == "":
+            main.append(c)
+        else:
+            replies.setdefault(parent, []).append(c)
+
+    return main, replies
+
+
+# -------------------------
+# 채팅 페이지
+# -------------------------
+@app.route("/chat")
+def chat_home():
+    chat = load_chat()
+
+    all_posts = []
+
+    for user, comments in chat.items():
+        for c in comments:
+            cid, parent, content = c
+
+            if parent == "":
+                all_posts.append({
+                    "id": cid,
+                    "user": user,
+                    "content": content
+                })
+
+    # 최신순 정렬
+    all_posts = sorted(all_posts, key=lambda x: x["id"], reverse=True)
+
+    # 댓글 따로
+    replies = {}
+    for user, comments in chat.items():
+        for c in comments:
+            cid, parent, content = c
+            if parent != "":
+                replies.setdefault(parent, []).append({
+                    "id": cid,
+                    "content": content,
+                    "user": user
+                })
+
+    return render_template(
+        "chat.html",
+        posts=all_posts,
+        replies=replies
+    )
+
+    
+
+@app.route("/add_post", methods=["POST"])
+def add_post():
+ 
+    if "user" not in session:
+        return jsonify({"success": False})
+
+    user = session["user"]
+    data = request.get_json()
+    content = data.get("content")
+
+    chat = load_chat()
+
+    if user not in chat:
+        chat[user] = []
+
+    # 🔥 ID 생성
+    max_id = 0
+    for u in chat:
+        for c in chat[u]:
+            if c[0] > max_id:
+                max_id = c[0]
+
+    new_id = max_id + 1
+
+    # 저장
+    chat[user].append([
+        new_id,
+        "",
+        content
+    ])
+
+    save_chat(chat)
+
+    return jsonify({"success": True})
+
+@app.route("/add_reply/<int:post_id>", methods=["POST"])
+def add_reply(post_id):
+    if "user" not in session:
+        return jsonify({"success": False})
+
+    user = session["user"]
+    data = request.get_json()
+    content = data.get("content")
+
+    chat = load_chat()
+
+    if user not in chat:
+        chat[user] = []
+
+    # 🔥 고유 ID 생성 (추천 방식)
+    import time
+    new_id = int(time.time() * 1000)
+
+    # 저장 (parent = post_id)
+    chat[user].append([
+        new_id,
+        post_id,
+        content
+    ])
+
+    save_chat(chat)
+
+    return jsonify({
+        "success": True,
+        "reply_id": new_id
+    })
+
+@app.route("/user/<username>")
+def user_posts(username):
+    chat = load_chat()
+
+    user_posts = []
+    user_replies = []
+
+    for user, comments in chat.items():
+        for c in comments:
+            cid, parent, content = c
+
+            # 글
+            if parent == "" and user == username:
+                user_posts.append({
+                    "id": cid,
+                    "user": user,
+                    "content": content
+                })
+
+            # 댓글
+            if parent != "" and user == username:
+                user_replies.append({
+                    "post_id": parent,
+                    "content": content
+                })
+
+    return render_template(
+        "user.html",
+        username=username,
+        posts=user_posts,
+        replies=user_replies
+    )
+
+
+@app.route("/edit_reply", methods=["POST"])
+def edit_reply():
+    data = request.json
+    target_id = data["id"]
+    new_content = data["content"]
+    user = session.get("user")   # 🔥 추가
+
+    chat = load_chat()
+
+    for u in chat:
+        if u != user:  # 🔥 본인만 수정
+            continue
+
+        for item in chat[u]:
+            if item[0] == target_id:
+                item[2] = new_content
+
+    save_chat(chat)
+
+    return jsonify(success=True)
+
+@app.route("/delete_item", methods=["POST"])
+def delete_item():
+    data = request.json
+    target_id = data["id"]
+
+    chat = load_chat()
+
+    delete_ids = set([target_id])
+
+    # 🔥 게시글이면 댓글까지 찾기
+    for user in chat:
+        for c in chat[user]:
+            cid, parent, content = c
+            if parent == target_id:
+                delete_ids.add(cid)
+
+    # 🔥 삭제 실행
+    for user in chat:
+        new_list = []
+        for c in chat[user]:
+            cid, parent, content = c
+
+            if cid not in delete_ids:
+                new_list.append(c)
+
+        chat[user] = new_list
+
+    save_chat(chat)
+
+    return jsonify(success=True)
+
+@app.route("/edit_post", methods=["POST"])
+def edit_post():
+    data = request.json
+    target_id = data["id"]
+    new_content = data["content"]
+    user = session.get("user")
+
+    chat = load_chat()
+
+    for u in chat:
+
+        if u != user:   # 본인 글만 수정
+            continue
+
+        for item in chat[u]:
+            cid, parent, content = item
+
+            if cid == target_id and parent == "":
+                item[2] = new_content
+
+    save_chat(chat)
+
+    return jsonify(success=True)
+# -------------------------
+# 실행
+# -------------------------
+
+
+
+
 
 if __name__ == "__main__":
     app.run(debug=True, use_reloader=False)
