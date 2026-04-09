@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
+
 <body class="bg-gray-100 font-sans">
 
     <!-- Header -->
@@ -87,24 +88,10 @@
         <!-- Main -->
         <main class="flex-1 p-8 transition-all duration-300 ease-in-out">
 
-            <h1 class="text-2xl font-bold mb-6">✏️ 수행평가 안내</h1>
+            <h1 class="text-2xl font-bold mb-6">✏️ 학교 일정 안내</h1>
 
             <!-- 필터 -->
             <div class="flex flex-wrap items-center gap-3 mb-6">
-
-                <!-- 학년 -->
-                <select id="gradeFilter" class="border px-3 py-2 rounded">
-                    <option value="전체">학년</option>
-                    <option value="1">1학년</option>
-                    <option value="2">2학년</option>
-                </select>
-
-                <!-- 검색 기준 -->
-                <select id="searchType" class="border px-3 py-2 rounded">
-                    <option value="subject">과목</option>
-                    <option value="title">이름</option>
-                    <option value="class">반</option>
-                </select>
 
                 <!-- 검색창 -->
                 <input id="searchInput" type="text" placeholder="검색..." class="border px-3 py-2 rounded w-48">
@@ -122,48 +109,61 @@
 
             <!-- 리스트 -->
             <div class="space-y-4">
-                {% if tasks|length == 0 %}
-                <p class="text-gray-500">등록된 수행평가가 없습니다.</p>
+                {% if events|length == 0 %}
+                <p class="text-gray-500">등록된 학교 행사가 없습니다.</p>
                 {% endif %}
 
-                {% for t in tasks %}
+                {% for e in events %}
                 <div class="task-item bg-white p-5 rounded-2xl shadow flex justify-between items-center"
-                    data-subject="{{ t.subject }}" data-title="{{ t.title }}" data-class="{{ t.class }}"
-                    data-grade="{{ t.grade }}" data-dday="{{ t.d_day }}">
+                    data-title="{{ e.title }}"
+                    data-dday="{{ e.d_day }}"
+                    data-date="{{ e.start }}"
+                    data-id="{{ e.id }}">
 
                     <div>
-                        <h2 class="text-lg font-bold">{{ t.title }}</h2>
-                        <p class="text-gray-500">{{ t.grade }}학년 {{ t.class }}반</p>
+                        <h2 class="text-lg font-bold">🎉 {{ e.title }}</h2>
+
+                        <p class="text-gray-500">
+                            {% if e.start == e.end %}
+                                {{ e.start }}
+                            {% else %}
+                                {{ e.start }} ~ {{ e.end }}
+                            {% endif %}
+                        </p>
 
                         <p class="
-                        {% if t.d_day < 0 %} text-blue-400 font-semibold
-                        {% elif t.d_day == 0 %} text-red-500 font-bold
-                        {% elif t.d_day == 1 %} text-red-400 font-semibold
-                        {% elif t.d_day <= 3 %} text-orange-400
+                        {% if e.d_day < 0 %} text-blue-400 font-semibold
+                        {% elif e.d_day == 0 %} text-red-500 font-bold
+                        {% elif e.d_day == 1 %} text-red-400 font-semibold
+                        {% elif e.d_day <= 3 %} text-orange-400
                         {% else %} text-gray-400
                         {% endif %}
                         ">
 
-                            {% if t.d_day < 0 %}
-                                ⏱ D+{{ t.d_day | abs }}
-                            {% elif t.d_day == 0 %}
+                            {% if e.d_day < 0 %}
+                                ⏱ D+{{ e.d_day | abs }}
+                            {% elif e.d_day == 0 %}
                                 🔥 D-Day
                             {% else %}
-                                ⏳ D-{{ t.d_day }}
+                                ⏳ D-{{ e.d_day }}
                             {% endif %}
 
                         </p>
 
+                        <!-- 🔥 로그인 메시지 -->
                         <p class="login-msg text-red-500 text-sm"></p>
                     </div>
 
+                    <!-- 🔥 버튼 영역 추가 -->
                     <div class="flex gap-2">
-                        <a href="/task/{{ t.id }}?from=tasks">
+                        <a href="/event/{{ e.id }}?from=school_event">
                             <button class="bg-gray-300 px-3 py-1 rounded">
                                 자세히 보기
                             </button>
                         </a>
-                        <button onclick="toggleCalendar({{ t.id }}, this)" data-id="{{ t.id }}"
+
+                        <button onclick="toggleCalendar({{ e.id }}, this)"
+                            data-id="{{ e.id }}"
                             class="calendar-btn bg-green-500 text-white px-3 py-1 rounded">
                             캘린더 추가
                         </button>
@@ -172,7 +172,6 @@
                 </div>
                 {% endfor %}
             </div>
-
         </main>
     </div>
     {% if session.get("user") %}
@@ -238,8 +237,6 @@
                 });
         }
     </script>
-
-    <!-- 기존 기능 -->
     <script>
         let userTasks = [];
 
@@ -252,12 +249,11 @@
         const container = document.querySelector(".space-y-4");
 
         // 🔥 유저 캘린더 상태 불러오기
-        fetch("/get_user_tasks")
+        fetch("/get_user_events")
             .then(res => res.json())
             .then(data => {
                 userTasks = data.tasks;
-                let userTaskIds = userTasks.map(t => t.id.toString());
-
+               let userTaskIds = userTasks.map(e => e.toString());
                 document.querySelectorAll(".calendar-btn").forEach(btn => {
                     let id = btn.dataset.id;
                     if (userTaskIds.includes(id)) {
@@ -270,11 +266,12 @@
 
         // 🔥 캘린더 토글
         function toggleCalendar(taskId, btn) {
+            console.log("🔥 클릭됨:", taskId);  // 추가
             if (btn.innerText === "캘린더 추가") {
-                fetch("/add_task", {
+                fetch("/add_event", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ task_id: taskId })
+                    body: JSON.stringify({ event_id: taskId })
                 })
                     .then(res => {
                         if (res.status === 401) { showLoginMessage(btn); return null; }
@@ -287,13 +284,20 @@
                         btn.classList.add("bg-red-500");
                     });
             } else {
-                fetch("/remove_task", {
+                fetch("/remove_event", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ task_id: taskId })
+                    body: JSON.stringify({ event_id: taskId })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        btn.innerText = "캘린더 추가";
+                        btn.classList.remove("bg-red-500");
+                        btn.classList.add("bg-green-500");
+                    }
                 });
 
-                btn.innerText = "캘린더 추가";
                 btn.classList.remove("bg-red-500");
                 btn.classList.add("bg-green-500");
             }
@@ -306,30 +310,14 @@
         }
 
         // 🔥 필터 + 검색 + 정렬
-        function filterTasks() {
+       function filterTasks() {
             const items = document.querySelectorAll(".task-item");
-
-            const grade = gradeFilter.value;
-            const type = searchType.value;
             const keyword = searchInput.value.toLowerCase();
 
             items.forEach(item => {
-                let match = true;
+                const title = item.dataset.title.toLowerCase();
 
-                // 학년 필터
-                if (grade !== "전체" && item.dataset.grade !== grade) {
-                    match = false;
-                }
-
-                // 검색 필터
-                if (keyword) {
-                    const value = (item.dataset[type] || "").toLowerCase();
-                    if (!value.includes(keyword)) {
-                        match = false;
-                    }
-                }
-
-                item.style.display = match ? "flex" : "none";
+                item.style.display = title.includes(keyword) ? "flex" : "none";
             });
 
             sortTasks();
@@ -370,10 +358,11 @@
 
             sorted.forEach(el => container.appendChild(el));
         }
+        window.addEventListener("load", () => {
+            sortTasks();
+        });
 
         // 🔥 이벤트 연결 (실시간)
-        gradeFilter.addEventListener("change", filterTasks);
-        searchType.addEventListener("change", filterTasks);
         searchInput.addEventListener("input", filterTasks);
         sortSelect.addEventListener("change", filterTasks);
     </script>

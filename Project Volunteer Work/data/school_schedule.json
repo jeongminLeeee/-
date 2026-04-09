@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "name": "체육대회",
+    "start_date": "2026-04-8",
+    "end_date": "2026-04-10",
+    "description": "전교생 체육 행사",
+    "image": ""
+  },
+  {
+    "id": 2,
+    "name": "중간고사",
+    "start_date": "2026-04-11",
+    "end_date": "2026-04-15",
+    "description": "1학기 중간고사",
+    "image": ""
+  },
+  {
+    "id": 5,
+    "name": "기말고사",
+    "start_date": "2026-04-21",
+    "end_date": "2026-04-22",
+    "description": "1학기 중간고사",
+    "image": ""
+  },
+  {
+    "id": 6,
+    "name": "수학 여행",
+    "start_date": "2026-04-20",
+    "end_date": "2026-04-24",
+    "description": "1학기 중간고사",
+    "image": ""
+  }
+]

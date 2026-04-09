@@ -35,8 +35,9 @@
             <div class="mb-3">
                 <div class="relative inline-block">
 
-                    <span onclick="togglePostMenu(event, '{{ p.user }}', '{{ session.get('user') }}', '{{ p.id }}')"
-                        class="{% if p.user == session.get('user') %}text-emerald-500 cursor-pointer{% else %}text-gray-400 cursor-default{% endif %}">
+                    <span 
+                    onclick="togglePostMenu(event, '{{ p.user }}', '{{ session.get('user') }}', '{{ p.id }}')"
+                    class="{% if p.user == session.get('user') %}text-emerald-500 cursor-pointer hover:text-emerald-600 active:brightness-75 active:scale-95 transition{% else %}text-gray-400 cursor-default{% endif %}">
                         {{ p.user }}
                     </span>
 
@@ -77,8 +78,9 @@
                     <div class="text-sm text-gray-600 pl-2 relative" data-reply-id="{{ r.id }}">
 
                         ↳
-                        <span onclick="toggleMenu(event, '{{ r.user }}', '{{ session.get('user') }}')"
-                            class="{% if r.user == session.get('user') %}text-emerald-500 cursor-pointer{% else %}text-gray-400 cursor-default{% endif %}">
+                        <span 
+                        onclick="toggleMenu(event, '{{ r.user }}', '{{ session.get('user') }}')"
+                        class="{% if r.user == session.get('user') %}text-emerald-500 cursor-pointer hover:text-emerald-600 active:brightness-75 active:scale-95 transition{% else %}text-gray-400 cursor-default{% endif %}">
                             {{ r.user }}
                         </span>
                         : <span class="reply-content">{{ r.content }}</span>

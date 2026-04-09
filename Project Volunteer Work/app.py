@@ -11,6 +11,8 @@ USER_CAL_FILE = "data/user_calendar.json"
 USER_SCHEDULE_FILE = "data/user_schedule.json"
 PROFILE_FILE = "data/profile.json"
 CHAT_PATH = "data/chat.json"
+SCHOOL_FILE = "data/school_schedule.json"
+EVENT_FILE = "data/event_calendar.json"
 # 폴더 자동 생성
 os.makedirs("data", exist_ok=True)
 
@@ -22,6 +24,11 @@ for f, default in [
     if not os.path.exists(f):
         with open(f, "w", encoding="utf-8") as file:
             json.dump(default, file, ensure_ascii=False, indent=4)
+
+
+
+
+
 
 
 def load_profiles():
@@ -102,7 +109,23 @@ def my_schedule():
             p["start"], "%Y-%m-%d"
         ).date()
 
-        d_day = (start_date - today).days
+        end_str = p.get("end") or p["start"]
+        end_date = datetime.datetime.strptime(
+            end_str, "%Y-%m-%d"
+        ).date()
+
+        # 🔥 스케줄 전용 D-day
+        if start_date <= today <= end_date:
+            d_day = 0
+            status = 0   # 진행중
+
+        elif today < start_date:
+            d_day = (start_date - today).days
+            status = 1   # 예정
+
+        else:
+            d_day = (today - end_date).days  # 🔥 D+
+            status = 2   # 끝남
 
         schedules.append({
             "id": p["id"],
@@ -110,10 +133,10 @@ def my_schedule():
             "date": p["start"],
             "end": p.get("end", ""),
             "type": "personal",
-            "color": "#10b981",
-            "d_day": d_day
+            "color": "#97E054",
+            "d_day": d_day,
+            "status": status   # 🔥 추가
         })
-
     # -----------------------------
     # 🔥 수행평가
     # -----------------------------
@@ -139,26 +162,61 @@ def my_schedule():
                 "date": t["date"],
                 "end": "",
                 "type": "task",
-                "color": "#3b82f6",
+                "color": "#2DC8F2",
                 "d_day": d_day
             })
+    
+
+    # -----------------------------
+    # 🔥 학교 행사 추가 (여기에 넣기!)
+    # -----------------------------
+    event_data = load_event_calendar()
+    selected_event_ids = event_data.get(user, [])
+
+    all_events = load_school_events()
+
+    for e in all_events:
+        if str(e["id"]) in selected_event_ids:
+
+            start_date = datetime.datetime.strptime(
+                e["start_date"], "%Y-%m-%d"
+            ).date()
+
+            d_day = (start_date - today).days
+
+            schedules.append({
+                "id": e["id"],
+                "title": f'📢 {e["name"]}',
+                "date": e["start_date"],
+                "end": e["end_date"],
+                "type": "event",   # 🔥 중요
+                "color": "#F7955D",  # 🔥 주황색
+                "d_day": d_day
+            })
+            
 
     # -----------------------------
     # 🔥 정렬
     # -----------------------------
     if sort == "deadline":
-        schedules.sort(key=lambda x: x["d_day"])
+        schedules.sort(key=lambda x: (
+            x.get("status", 1),  # 🔥 끝난 일정 뒤로
+            x["d_day"]
+        ))
 
     elif sort == "name":
-        schedules.sort(key=lambda x: x["title"].lower())
+        schedules.sort(key=lambda x: (
+            x.get("status", 1),
+            x["title"].lower()
+        ))
 
-    else:  # 최신순
-        schedules.sort(
-            key=lambda x: datetime.datetime.strptime(
+    else:
+        schedules.sort(key=lambda x: (
+            x.get("status", 1),
+            -datetime.datetime.strptime(
                 x["date"], "%Y-%m-%d"
-            ),
-            reverse=True
-        )
+            ).timestamp()
+        ))
 
     # -----------------------------
     # 🔥 페이지 반환
@@ -823,12 +881,182 @@ def edit_post():
 
     return jsonify(success=True)
 # -------------------------
-# 실행
+# 학교 행사
 # -------------------------
 
+def load_school_events():
+    with open(SCHOOL_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+    
 
 
 
+def load_event_calendar():
+    try:
+        with open(EVENT_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_event_calendar(data):
+    with open(EVENT_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+
+@app.route("/school_event")
+def school_event_page():
+
+    events = load_school_events()
+    today = datetime.date.today()
+
+    result = []
+
+    for e in events:
+        start = datetime.datetime.strptime(e["start_date"], "%Y-%m-%d").date()
+        end = datetime.datetime.strptime(e["end_date"], "%Y-%m-%d").date()
+
+        if today < start:
+            # 시작 전 → D-
+            d_day = (start - today).days
+
+        elif start <= today <= end:
+            # 🔥 진행 중 → D-Day 유지
+            d_day = 0
+
+        else:
+            # 🔥 종료 후 → D+
+            d_day = -(today - end).days
+
+        result.append({
+            "id": e["id"],
+            "title": e["name"],
+            "start": e["start_date"],
+            "end": e["end_date"],
+            "description": e["description"],
+            "d_day": d_day
+        })
+
+    # 최신순 정렬
+    result.sort(
+        key=lambda x: datetime.datetime.strptime(x["start"], "%Y-%m-%d"),
+        reverse=True
+    )
+
+    return render_template("school_event.html", events=result)
+
+@app.route("/event/<int:event_id>")
+def event_detail(event_id):
+    events = load_school_events()
+
+    event = next((e for e in events if e["id"] == event_id), None)
+
+    if not event:
+        return "행사 없음", 404
+
+    prev = request.args.get("from", "school_event")  # 🔥 추가
+
+    return render_template(
+        "event_detail.html",
+        event=event,
+        prev=prev   # 🔥 추가
+    )
+
+@app.route("/get_user_events")
+def get_user_events():
+    if "user" not in session:
+        return jsonify({"tasks": []})
+
+    data = load_event_calendar()
+    user = session["user"]
+
+    ids = data.get(user, [])  # ["5", "1"] 이런 형태
+
+    return jsonify({
+        "tasks": ids   # 🔥 그대로 반환
+    })
+@app.route("/add_event", methods=["POST"])
+
+def add_event():
+    
+    if "user" not in session:
+        return jsonify({"msg": "로그인 필요"}), 401
+
+    event_id = request.json.get("event_id")
+    user = session["user"]
+
+    data = load_event_calendar()
+
+    if user not in data:
+        data[user] = []
+
+    # 중복 방지
+    event_id = str(request.json.get("event_id"))  # 문자열로 통일
+
+    data = load_event_calendar()
+
+    if user not in data:
+        data[user] = []
+
+    # 중복 방지
+    if event_id in data[user]:
+        return jsonify({"msg": "이미 추가됨"})
+
+    data[user].append(event_id)  # 🔥 핵심: 그냥 문자열 저장
+    save_event_calendar(data)
+
+    return jsonify({"success": True})
+
+@app.route("/remove_event", methods=["POST"])
+def remove_event():
+    if "user" not in session:
+        return "", 401
+
+    user = session["user"]
+    event_id = str(request.json.get("event_id"))  # 🔥 무조건 문자열
+
+    data = load_event_calendar()
+
+    if user in data:
+        print("삭제 전:", data[user])
+
+        # 🔥 문자열 기준으로 정확히 제거
+        data[user] = [
+            str(e) for e in data[user]
+            if str(e) != str(event_id)
+        ]
+
+        print("삭제 후:", data[user])
+
+    save_event_calendar(data)
+
+    return jsonify({"success": True})
+
+@app.route("/get_user_events_full")
+def get_user_events_full():
+    if "user" not in session:
+        return jsonify([])
+
+    user = session["user"]
+
+    # 유저가 추가한 행사 ID 목록
+    data = load_event_calendar()
+    selected_ids = data.get(user, [])
+
+    # 전체 행사
+    events = load_school_events()
+
+    result = []
+
+    for e in events:
+        if str(e["id"]) in selected_ids:
+            result.append({
+                "id": e["id"],
+                "title": e["name"],
+                "start": e["start_date"],
+                "end": e["end_date"]
+            })
+
+    return jsonify(result)
 
 if __name__ == "__main__":
     app.run(debug=True, use_reloader=False)

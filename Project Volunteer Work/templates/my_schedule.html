@@ -60,6 +60,11 @@
                         개인일정
                     </label>
 
+                    <label class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" value="event" checked>
+                        학교행사
+                    </label>
+
                     <button onclick="applyFilters()" class="mt-2 w-full bg-gray-300 px-3 py-1 rounded">
                         적용
                     </button>
@@ -112,7 +117,7 @@
                     {% elif s.d_day == 0 %}
                     D-Day
                     {% else %}
-                    D+{{ s.d_day|abs }}
+                    D+{{ s.d_day }}
                     {% endif %}
 
                 </p>
@@ -123,6 +128,7 @@
         <!-- 오른쪽 버튼 -->
         <div class="flex gap-2">
 
+            
             {% if s.type == "task" %}
 
             <a href="/task/{{ s.id }}?from=my_schedule">
@@ -132,6 +138,19 @@
             </a>
 
             <button onclick="deleteTask({{ s.id }})"
+                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+                삭제
+            </button>
+
+            {% elif s.type == "event" %}
+
+            <a href="/event/{{ s.id }}?from=my_schedule">
+                <button class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg">
+                    자세히 보기
+                </button>
+            </a>
+
+            <button onclick="deleteEvent('{{ s.id }}')"
                 class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
                 삭제
             </button>
@@ -254,26 +273,40 @@
         // ----------------------
         const btn =
             document.getElementById("filterBtn");
-
-        if (checked.length === 2)
+        if (checked.length === 3)
             btn.innerText = "전체";
 
-        else if (checked.length === 1)
-            btn.innerText =
-                checked[0] === "task"
-                    ? "수행평가"
-                    : "개인일정";
+        else if (checked.length === 1) {
+            if (checked[0] === "task") btn.innerText = "수행평가";
+            else if (checked[0] === "personal") btn.innerText = "개인일정";
+            else btn.innerText = "학교행사";
+        }
 
         else
-            btn.innerText = "없음";
+            btn.innerText = "선택";
+    }
+    function deleteEvent(id) {
+
+        fetch("/remove_event", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                event_id: String(id)
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
     }
 
 
     // ❌ 개인 일정 삭제
     function deletePersonalSchedule(id) {
-
-        if (!confirm("정말 삭제하시겠습니까?"))
-            return;
 
         fetch("/delete_personal_schedule", {
             method: "POST",
@@ -297,8 +330,6 @@
     // ❌ 수행평가 삭제
     function deleteTask(id) {
 
-        if (!confirm("정말 삭제하시겠습니까?"))
-            return;
 
         fetch("/delete_task", {
             method: "POST",

@@ -20,8 +20,6 @@
 
     <div class="flex relative">
 
-        <!-- 🔥 사이드바 -->
-        <!-- 사이드바 -->
         <aside id="sidebar"
             class="w-64 bg-white p-4 shadow-md min-h-screen sticky top-0 transition-all duration-300 ease-in-out relative">
 
@@ -68,7 +66,7 @@
                         <a href="/tasks">
                             <li>- 수행평가</li>
                         </a>
-                        <a href="/tasks">
+                        <a href="/school_event">
                             <li>- 주요행사</li>
                         </a>
                         <li class="font-bold">📝 나의 일정 관리</li>
@@ -211,18 +209,17 @@
 
 
     <!-- 🔥 일정 클릭 시 회색 메뉴 -->
-    <div id="eventMenu" class="hidden fixed bg-gray-100 shadow-lg rounded-lg p-2 z-50 w-28 flex flex-col">
+    <div id="eventMenu"
+        class="hidden fixed bg-white border shadow-xl rounded-xl p-2 z-50 w-32 flex flex-col gap-1">
 
-        <button id="deleteBtn" class="w-full text-left px-3 py-2 hover:bg-gray-200 rounded">
-
-            삭제
-
+        <button id="editBtn"
+            class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 transition">
+            ✏️ 수정
         </button>
 
-        <button id="editBtn" class="w-full text-left px-3 py-2 hover:bg-gray-200 rounded">
-
-            수정
-
+        <button id="deleteBtn"
+            class="w-full text-left px-3 py-2 rounded-lg hover:bg-red-100 text-red-500 transition">
+            🗑 삭제
         </button>
 
     </div>
@@ -242,11 +239,13 @@
             const deleteBtn = document.getElementById("deleteBtn");
             const editBtn = document.getElementById("editBtn");
 
-            menu.style.left = x + "px";
-            menu.style.top = y + "px";
+            // 🔥 위치 (스크롤 보정)
+            menu.style.left = (x - window.scrollX) + "px";
+            menu.style.top = (y - window.scrollY) + "px";
+
             menu.classList.remove("hidden");
 
-            // 수행평가면 수정 숨김
+            // 🔥 타입별 처리
             if (event.extendedProps.type === "task") {
                 editBtn.style.display = "none";
             } else {
@@ -254,27 +253,25 @@
             }
 
             deleteBtn.onclick = function (e) {
-
                 e.stopPropagation();
 
                 if (event.extendedProps.type === "personal") {
                     deletePersonal(event.id);
-                } else {
+                } else if (event.extendedProps.type === "task") {
                     deleteTask(event.id);
+                } else if (event.extendedProps.type === "event") {
+                    deleteEvent(event.id);
                 }
 
                 menu.classList.add("hidden");
             };
 
             editBtn.onclick = function (e) {
-
                 e.stopPropagation();
-
                 menu.classList.add("hidden");
                 openEditForm(event);
             };
         }
-
         // 화면 클릭하면 메뉴 닫기 (메뉴 내부 클릭 제외)
         document.addEventListener("click", function (e) {
 
@@ -450,7 +447,7 @@
                                 id: t.id,
                                 title: t.title,
                                 start: t.date,
-                                color: "#3b82f6",
+                                color: "#2DC8F2",
                                 type: "task"
                             }));
 
@@ -468,16 +465,37 @@
                                             title: p.title,
                                             start: p.start,
                                             end: endDate.toISOString().split("T")[0],
-                                            color: "#10b981",
+                                            color: "#97E054",
                                             type: "personal",
                                             description: p.description
                                         };
                                     });
 
-                                    successCallback([
-                                        ...tasks,
-                                        ...personalEvents
-                                    ]);
+                                    return fetch("/get_user_events_full")
+                                        .then(res => res.json())
+                                        .then(events => {
+
+                                            let schoolEvents = events.map(e => {
+
+                                                let endDate = new Date(e.end);
+                                                endDate.setDate(endDate.getDate() + 1);
+
+                                                return {
+                                                    id: e.id,
+                                                    title: "🎉 " + e.title,
+                                                    start: e.start,
+                                                    end: endDate.toISOString().split("T")[0],
+                                                    color: "#F7955D",   // 🔥 주황색   // 🔥 보라색
+                                                    type: "event"
+                                                };
+                                            });
+
+                                            successCallback([
+                                                ...tasks,
+                                                ...personalEvents,
+                                                ...schoolEvents   // 🔥 추가
+                                            ]);
+                                        });
                                 });
                         });
                 },
@@ -489,6 +507,13 @@
 
                     jsEvent.preventDefault();
                     jsEvent.stopPropagation();
+
+                    // 🔥 클릭 효과 (살짝 어두워졌다가 돌아옴)
+                    const el = info.el;
+                    el.style.filter = "brightness(0.7)";
+                    setTimeout(() => {
+                        el.style.filter = "brightness(1)";
+                    }, 150);
 
                     openEventMenu(
                         event,
@@ -587,6 +612,17 @@
                     el.style.display = "none";
                 }
             });
+        }
+        function deleteEvent(id) {
+            fetch("/remove_event", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ event_id: id })
+            })
+            .then(res => res.json())
+            .then(() => location.reload());
         }
     </script>
     <script>
