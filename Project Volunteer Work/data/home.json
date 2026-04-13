@@ -1,0 +1,15 @@
+{
+    "intro": "안녕하세요, 저는 이정음입니다. ",
+    "notice": "여기는 공지사항입니다. 중요한 사항을 확인하세요.",
+    "parts": {
+        "1": {
+            "text": "22",
+            "image": "/static/uploads/daesang_2.png"
+        },
+        "2": {
+            "text": "내용",
+            "image": "/static/uploads/daesang_3.png"
+        }
+    },
+    "intro_image": "/static/uploads/daesang_3.png"
+}
