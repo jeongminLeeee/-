@@ -79,6 +79,13 @@
                                 ⭐ 피드백
                             </li>
                         </a>
+                        {% if session.get("role") == "admin" %}
+                        <a href="/admin">
+                            <li class="mt-4 font-bold text-red-500">
+                                ⚙ 관리자 페이지
+                            </li>
+                        </a>
+                        {% endif %}
                     </ul>
                 </nav>
             </div>

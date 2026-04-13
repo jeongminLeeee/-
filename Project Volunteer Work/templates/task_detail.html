@@ -101,6 +101,11 @@
                     <h1 class="text-2xl font-bold text-center">
                         {{ task.title }}
                     </h1>
+                    {% if session.get('role') == 'admin' %}
+                    <button onclick="editTaskDetail('{{ task.id }}')" class="text-blue-500 text-sm block mx-auto">
+                        수정
+                    </button>
+                    {% endif %}
 
                 </div>
 
@@ -200,6 +205,28 @@
         }
     </script>
 
+<script>
+    function editTaskDetail(taskId){
+    const title = prompt("제목 수정");
+    const context = prompt("내용 수정");
+
+    fetch("/admin/update_task", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            id: taskId,
+            title: title,
+            context: context
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            location.reload();
+        }
+    });
+}
+</script>
 
 
 </body>

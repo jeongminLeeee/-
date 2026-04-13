@@ -61,6 +61,13 @@
                 <div class="mt-1 text-gray-700">
                     {{ p.content }}
                 </div>
+
+                {% if session.get("role") == "admin" or p.user == session.get("user") %}
+                <button onclick="deleteItem('{{ p.id }}', this)"
+                    class="text-red-500 text-sm mt-2 hover:underline">
+                    삭제
+                </button>
+                {% endif %}
             </div>
 
             <!-- 댓글 버튼 -->

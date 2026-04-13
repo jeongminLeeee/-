@@ -158,12 +158,23 @@
                     </div>
 
                     <div class="flex gap-2">
+                        {% if session.get('role') == 'admin' %}
+
+                        <button onclick="editTask('{{ t.id }}')" class="bg-blue-500 text-white px-2 py-1 rounded">
+                            수정
+                        </button>
+
+                        <button onclick="deleteTask('{{ t.id }}')" class="bg-red-500 text-white px-2 py-1 rounded">
+                            삭제
+                        </button>
+
+                        {% endif %}
                         <a href="/task/{{ t.id }}?from=tasks">
                             <button class="bg-gray-300 px-3 py-1 rounded">
                                 자세히 보기
                             </button>
                         </a>
-                        <button onclick="toggleCalendar({{ t.id }}, this)" data-id="{{ t.id }}"
+                        <button onclick="toggleCalendar('{{ t.id }}', this)" data-id="{{ t.id }}"
                             class="calendar-btn bg-green-500 text-white px-3 py-1 rounded">
                             캘린더 추가
                         </button>
@@ -239,6 +250,72 @@
         }
     </script>
 
+    <!-- 작업 항목 추가 버튼 -->
+<button onclick="openAddTaskModal()" class="bg-blue-500 text-white px-4 py-2 rounded">수행평가 추가</button>
+
+<!-- 수행평가 추가 모달 -->
+<div id="addTaskModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg flex flex-col items-center gap-4">
+        <h2 class="text-xl font-bold mb-2">수행평가 추가</h2>
+        <form id="addTaskForm">
+            <input type="text" id="taskTitle" placeholder="제목" class="border p-2 mb-2 w-64" required>
+            <input type="text" id="taskSubject" placeholder="과목" class="border p-2 mb-2 w-64" required>
+            <input type="number" id="taskGrade" placeholder="학년" class="border p-2 mb-2 w-64" required>
+            <input type="text" id="taskClass" placeholder="반" class="border p-2 mb-2 w-64" required>
+            <input type="text" id="taskDate" placeholder="기간" class="border p-2 mb-2 w-64" required>
+            <textarea id="taskContext" placeholder="내용" class="border p-2 mb-2 w-64" required></textarea>
+            <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">저장</button>
+        </form>
+        <button onclick="closeAddTaskModal()" class="mt-4 px-4 py-2 bg-gray-300 rounded">취소</button>
+    </div>
+</div>
+
+<!-- JavaScript: 수행평가 추가 모달 열기 / 닫기 -->
+<script>
+    function openAddTaskModal() {
+        document.getElementById("addTaskModal").classList.remove("hidden");
+    }
+
+    function closeAddTaskModal() {
+        document.getElementById("addTaskModal").classList.add("hidden");
+    }
+
+    // 수행평가 추가 처리
+    document.getElementById("addTaskForm").addEventListener("submit", function(e) {
+        e.preventDefault(); // 폼 제출 시 페이지 새로고침 방지
+
+        const title = document.getElementById("taskTitle").value;
+        const subject = document.getElementById("taskSubject").value;
+        const grade = document.getElementById("taskGrade").value;
+        const class_name = document.getElementById("taskClass").value;
+        const date = document.getElementById("taskDate").value;
+        const context = document.getElementById("taskContext").value;
+
+        fetch("/admin/add_task", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                title: title,
+                subject: subject,
+                grade: grade,
+                class: class_name,
+                date: date,
+                context: context
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();  // 새로고침하여 수행평가 리스트 갱신
+            } else {
+                alert("수행평가 추가 실패!");
+            }
+        });
+    });
+</script>
+
     <!-- 기존 기능 -->
     <script>
         let userTasks = [];
@@ -271,7 +348,7 @@
         // 🔥 캘린더 토글
         function toggleCalendar(taskId, btn) {
             if (btn.innerText === "캘린더 추가") {
-                fetch("/add_task", {
+                fetch("/admin/add_task", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ task_id: taskId })
@@ -377,6 +454,77 @@
         searchInput.addEventListener("input", filterTasks);
         sortSelect.addEventListener("change", filterTasks);
     </script>
+
+<script>
+    function editTask(taskId){
+    const title = prompt("제목 수정");
+    const context = prompt("내용 수정");
+
+    fetch("/admin/update_task", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            id: taskId,
+            title: title,
+            context: context
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            location.reload();
+        } else {
+            alert("수정 실패");
+        }
+    });
+}
+</script>
+
+<script>
+    function deleteTask(taskId){
+
+    if(!confirm("정말 삭제하시겠습니까?")) return;
+
+    fetch("/admin/delete_task", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            id: taskId
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            alert("삭제 완료");
+            location.reload();
+        } else {
+            alert("삭제 실패");
+        }
+    });
+}
+</script>
+
+<script>
+function addTask(taskId) {
+    fetch("/add_task", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            task_id: taskId
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert("추가 완료!");
+        } else {
+            alert("실패");
+        }
+    });
+}
+</script>
 
 </body>
 

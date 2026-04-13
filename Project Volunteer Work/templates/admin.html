@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>관리자</title>
+</head>
+<body>
+
+<h1>관리자 페이지</h1>
+
+<hr>
+
+<!-- ===================== -->
+<!-- 🔥 유저 관리 -->
+<!-- ===================== -->
+<h2>유저 관리</h2>
+
+<ul>
+    {% for username, pw in users.items() %}
+    <li>
+        {{ username }}
+
+        <form method="POST" style="display:inline;">
+            <input type="hidden" name="action" value="delete_user">
+            <input type="hidden" name="username" value="{{ username }}">
+            <button type="submit">삭제</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+
+<hr>
+
+<!-- ===================== -->
+<!-- 🔥 수행평가 목록 -->
+<!-- ===================== -->
+<h2>수행평가 목록</h2>
+
+<ul>
+    {% for t in tasks %}
+    <li>
+        {{ t.subject }} - {{ t.title }} ({{ t.date }})
+    </li>
+    {% endfor %}
+</ul>
+
+<hr>
+
+<!-- ===================== -->
+<!-- 🔥 수행평가 추가 -->
+<!-- ===================== -->
+<h2>수행평가 추가</h2>
+
+<form method="POST">
+    <input type="hidden" name="action" value="add_task">
+
+    <input name="title" placeholder="제목"><br>
+    <input name="subject" placeholder="과목"><br>
+    <input name="grade" placeholder="학년"><br>
+    <input name="class" placeholder="반"><br>
+    <input name="date" type="date"><br>
+    <textarea name="context" placeholder="내용"></textarea><br>
+
+    <button type="submit">추가</button>
+</form>
+
+</body>
+</html>

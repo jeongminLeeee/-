@@ -12,39 +12,209 @@
 
 {% block content %}
 
+
 <!-- 공지 -->
 <section class="bg-white p-4 rounded-2xl shadow mb-6">
     <h2 class="font-bold mb-2">📢 공지</h2>
-    <p class="text-gray-600">여기에 공지 내용이 표시됩니다.</p>
+    <p class="text-gray-600" id="noticeContent">
+        {{ home.notice if home is defined else "공지 내용이 없습니다." }}
+    </p>
+    {% if session.get('role') == 'admin' %}
+        <button onclick="editNotice()" class="text-blue-500 text-sm">수정</button>
+    {% endif %}
 </section>
 
 <!-- 사이트 소개 -->
 <section class="bg-white p-4 rounded-2xl shadow mb-6">
     <h2 class="font-bold mb-4">📚 사이트 소개</h2>
     <div class="flex gap-4">
-        <div class="w-1/2 h-40 bg-gray-200 rounded-lg flex items-center justify-center">
-            이미지 영역
+        <div class="w-1/2">
+            <img id="introImage"
+                src="{{ home.intro_image if home is defined else '/static/default_intro.png' }}"
+                class="w-full h-auto object-cover rounded-lg">
+
+            {% if session.get('role') == 'admin' %}
+            <div class="mt-2">
+                <input type="file" id="introFile" class="hidden" onchange="uploadIntroImage()">
+                <button onclick="document.getElementById('introFile').click()" class="text-blue-500 text-sm">
+                이미지 수정
+                </button>
+            </div>
+            {% endif %}
         </div>
         <div class="flex-1 space-y-2">
-            <h5>안녕하세요. 저는 이정음입니다. 여러분의 일정 관리를 도와주는 사이트입니다.</h5>
+            <h5 id="introContent">
+                {{ home.intro if home is defined else "사이트 소개 내용이 없습니다." }}
+            </h5>
+            {% if session.get('role') == 'admin' %}
+                <button onclick="editIntro()" class="text-blue-500 text-sm">수정</button>
+            {% endif %}
         </div>
     </div>
 </section>
+
+<script>
+    function editNotice() {
+        const newContent = prompt("새로운 공지 내용을 입력하세요.", document.getElementById("noticeContent").textContent);
+        
+        if (newContent) {
+            fetch("/admin/update_notice", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ "notice": newContent })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById("noticeContent").textContent = newContent;
+                } else {
+                    alert("공지 수정 실패!");
+                }
+            });
+        }
+    }
+
+    function editIntro() {
+        const newContent = prompt("새로운 사이트 소개 내용을 입력하세요.", document.getElementById("introContent").textContent);
+        
+        if (newContent) {
+            fetch("/admin/update_intro", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ "intro": newContent })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById("introContent").textContent = newContent;
+                } else {
+                    alert("소개 수정 실패!");
+                }
+            });
+        }
+    }
+</script>
 
 <!-- 컬럼 -->
 <section class="grid grid-cols-2 gap-6">
     <div class="bg-white p-4 rounded-2xl shadow">
         <h3 class="font-bold mb-2"> 📌 박채윤 part1</h3>
-        <div class="h-40 bg-gray-200 rounded-lg flex items-center justify-center">이미지 영역</div>
-        <p class="text-gray-600">곧 마감되는 일정 표시</p>
+        {% if session.get('role') == 'admin' %}
+        <button onclick="editPart(1)" class="text-blue-500 text-sm">
+            수정
+        </button>
+        {% endif %}
+        <!-- 박채윤 part1 -->
+        {% if session.get('role') == 'admin' %}
+        <div class="flex items-center space-x-2 mt-2">
+            <input type="file" id="fileInput1" class="hidden" accept="image/*" onchange="uploadImage(1)">
+            <label for="fileInput1" class="cursor-pointer text-blue-500">이미지 수정</label>
+        </div>
+        {% endif %}
+        {% set img1 = (home.parts['1'].image if home is defined and home.parts is defined else None) %}
+
+        <img src="{{ img1 if img1 else '/static/daesang_1.png' }}"
+             alt="박채윤 part1 이미지"
+             class="w-full h-auto object-cover rounded-lg">
+        <p class="text-gray-600">
+            {{ home.get('parts', {}).get('1', {}).get('text', '곧 마감되는 일정 표시') }}
+        </p>
     </div>
     <div class="bg-white p-4 rounded-2xl shadow">
         <h3 class="font-bold mb-2"> 📌 박채윤 part2</h3>
-        <div class="h-40 bg-gray-200 rounded-lg flex items-center justify-center">이미지 영역</div>
-        <p class="text-gray-600">곧 마감되는 일정 표시</p>
+        {% if session.get('role') == 'admin' %}
+        <button onclick="editPart(2)" class="text-blue-500 text-sm">
+         수정
+        </button>
+        {% endif %}
+        <!-- 박채윤 part2 -->
+        {% if session.get('role') == 'admin' %}
+        <div class="flex items-center space-x-2 mt-2">
+            <input type="file" id="fileInput2" class="hidden" accept="image/*" onchange="uploadImage(2)">
+            <label for="fileInput2" class="cursor-pointer text-blue-500">이미지 수정</label>
+        </div>
+        {% endif %}
+        {% set img2 = (home.parts['2'].image if home is defined and home.parts is defined else None) %}
+
+        <img src="{{ img2 if img2 else '/static/daesang_2.png' }}"
+            alt="박채윤 part2 이미지"
+            class="w-full h-auto object-cover rounded-lg">
+        <p class="text-gray-600">
+            {{ home.get('parts', {}).get('2', {}).get('text', '곧 마감되는 일정 표시') }}
+        </p>
     </div>
 </section>
 
+<script>
+function editPart(num){
+    const text = prompt("내용 입력");
+
+    fetch("/admin/update_home", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            part: num,
+            content: text
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            location.reload();
+        }
+    });
+}
+</script>
+
+<script>
+function uploadIntroImage(){
+    const file = document.getElementById("introFile").files[0];
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    fetch("/admin/update_intro_image", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            location.reload();
+        }
+    });
+}
+</script>
+
+<script>
+function uploadImage(partNumber){
+    const fileInput = document.getElementById(`fileInput${partNumber}`);
+    const file = fileInput.files[0];
+
+    if (file) {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('part', partNumber);
+
+        fetch("/admin/upload_image", {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert("이미지가 성공적으로 업로드되었습니다.");
+                location.reload();
+            } else {
+                alert("이미지 업로드 실패!");
+            }
+        });
+    } else {
+        alert("파일을 선택해 주세요.");
+    }
+}
+</script>
+
 {% endblock %}
 
-</html>
+</html>python 

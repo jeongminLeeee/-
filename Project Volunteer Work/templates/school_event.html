@@ -156,13 +156,25 @@
 
                     <!-- 🔥 버튼 영역 추가 -->
                     <div class="flex gap-2">
+                        {% if session.get('role') == 'admin' %}
+
+                        <button onclick="editTask('{{ e.id }}')" class="bg-blue-500 text-white px-2 py-1 rounded">
+    수정
+                        </button>
+
+                        <button onclick="deleteTask('{{ e.id }}')" class="bg-red-500 text-white px-2 py-1 rounded">
+                        삭제
+                        </button>
+
+                        {% endif %}
+
                         <a href="/event/{{ e.id }}?from=school_event">
                             <button class="bg-gray-300 px-3 py-1 rounded">
                                 자세히 보기
                             </button>
                         </a>
 
-                        <button onclick="toggleCalendar({{ e.id }}, this)"
+                        <button onclick="toggleCalendar('{{ e.id }}', this)"
                             data-id="{{ e.id }}"
                             class="calendar-btn bg-green-500 text-white px-3 py-1 rounded">
                             캘린더 추가
