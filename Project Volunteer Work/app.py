@@ -1,8 +1,16 @@
 from flask import Flask, render_template, request, redirect, session, jsonify
 import json, os, datetime, calendar
 import holidays
+import os
+from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.secret_key = "my_super_secret_key_1234"
+
+from admin import admin_bp
+app.register_blueprint(admin_bp)
+
+ADMIN_ID = "jack22"
+ADMIN_PASSWORD = "293025"
 
 # 파일 경로
 DATA_FILE = "data/users.json"
@@ -13,8 +21,14 @@ PROFILE_FILE = "data/profile.json"
 CHAT_PATH = "data/chat.json"
 SCHOOL_FILE = "data/school_schedule.json"
 EVENT_FILE = "data/event_calendar.json"
+HOME_FILE = "data/home_content.json"
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 # 폴더 자동 생성
 os.makedirs("data", exist_ok=True)
+
 
 for f, default in [
     (DATA_FILE, {}),
@@ -25,10 +39,13 @@ for f, default in [
         with open(f, "w", encoding="utf-8") as file:
             json.dump(default, file, ensure_ascii=False, indent=4)
 
+def load_tasks():
+    with open(TASK_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
-
-
+def admin_only():
+    return session.get("role") == "admin"
 
 
 def load_profiles():
@@ -40,6 +57,17 @@ def load_profiles():
         with open(PROFILE_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+os.makedirs("static/uploads", exist_ok=True)
+os.makedirs("data", exist_ok=True)
+
+def load_home():
+    file_path = "data/home.json"
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    else:
         return {}
 
 # -----------------------------
@@ -392,6 +420,11 @@ def load_users():
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
+TASK_FILE = "data/tasks.json"
+
+def load_tasks():
+    with open(TASK_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def save_users(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
@@ -411,8 +444,65 @@ def load_tasks():
 # -----------------------------
 @app.route("/")
 def home():
-    return render_template("index.html")
+    home_data = load_home()
+    return render_template("index.html", home=home_data)
 
+import os
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = 'static/uploads'  # 이미지 저장 폴더 설정
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+# 확장자 체크 함수
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route("/admin/upload_image", methods=["POST"])
+def upload_image():
+    if session.get("role") != "admin":
+        return jsonify({"success": False}), 403
+
+    # 파일이 제출되지 않았으면
+    if 'image' not in request.files:
+        return jsonify({"success": False, "message": "파일이 없습니다."})
+
+    file = request.files['image']
+    if file.filename == '' or not allowed_file(file.filename):
+        return jsonify({"success": False, "message": "잘못된 파일 형식입니다."})
+
+    part = request.form.get('part')
+
+    # 파일 저장 경로 설정
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
+
+    # 파일 저장
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
+    
+    file.save(file_path)
+
+    # home.json 파일에서 경로 업데이트
+    file_url = f"/static/uploads/{filename}"
+
+    home_file_path = 'data/home.json'
+    if os.path.exists(home_file_path):
+        with open(home_file_path, 'r', encoding='utf-8') as f:
+            home = json.load(f)
+    else:
+        home = {}
+
+    # 수정하려는 part에 해당하는 이미지를 업데이트
+    home.setdefault("parts", {})
+    home["parts"].setdefault(str(part), {})
+
+    home["parts"][str(part)]["image"] = file_url
+
+    # home.json 파일에 저장
+    with open(home_file_path, 'w', encoding='utf-8') as f:
+        json.dump(home, f, ensure_ascii=False, indent=4)
+
+    return jsonify({"success": True})
 
 # -----------------------------
 # 로그인
@@ -424,11 +514,18 @@ def login():
         username = request.form["username"]
         password = request.form["password"]
         users = load_users()
+
         if username in users and users[username] == password:
             session["user"] = username
+
+            # 관리자 계정 확인
+            if username == ADMIN_ID and password == ADMIN_PASSWORD:
+                session["role"] = "admin"  # 관리자 권한 부여
+            else:
+                session["role"] = "user"   # 일반 사용자
+
             return redirect("/")
-        else:
-            error = "아이디 또는 비밀번호가 틀렸습니다."
+        error = "아이디 또는 비밀번호가 틀렸습니다."
     return render_template("login.html", error=error)
 
 
@@ -440,6 +537,46 @@ def logout():
     session.pop("user", None)
     return redirect("/")
 
+@app.route("/admin", methods=["GET", "POST"])
+def admin_page():
+    if session.get("role") != "admin":
+        return "접근 금지", 403
+
+    users = load_users()
+    tasks = load_tasks()
+
+    # 🔥 유저 삭제
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "delete_user":
+            username = request.form.get("username")
+
+            if username in users:
+                del users[username]
+                save_users(users)
+
+        # 🔥 수행평가 추가
+        elif action == "add_task":
+            new_task = {
+                "id": int(datetime.datetime.now().timestamp()),
+                "title": request.form.get("title"),
+                "subject": request.form.get("subject"),
+                "grade": request.form.get("grade"),
+                "class": request.form.get("class"),
+                "date": request.form.get("date"),
+                "context": request.form.get("context", ""),
+                "img": ""
+            }
+
+            tasks.append(new_task)
+
+            with open(TASK_FILE, "w", encoding="utf-8") as f:
+                json.dump(tasks, f, ensure_ascii=False, indent=4)
+
+        return redirect("/admin")
+
+    return render_template("admin.html", users=users, tasks=tasks)
 
 # -----------------------------
 # 회원가입
@@ -492,6 +629,7 @@ def tasks_page():
         filtered_tasks.sort(key=lambda x: x["subject"])
 
     return render_template("tasks.html", tasks=filtered_tasks)
+
 
 
 # -----------------------------
@@ -819,7 +957,7 @@ def edit_reply():
             continue
 
         for item in chat[u]:
-            if item[0] == target_id:
+           if str(item[0]) == str(target_id):
                 item[2] = new_content
 
     save_chat(chat)
@@ -833,25 +971,35 @@ def delete_item():
 
     chat = load_chat()
 
+    user = session.get("user")
+    role = session.get("role")
+
     delete_ids = set([target_id])
 
-    # 🔥 게시글이면 댓글까지 찾기
-    for user in chat:
-        for c in chat[user]:
+    # 🔥 게시글이면 댓글까지 삭제
+    for u in chat:
+        for c in chat[u]:
             cid, parent, content = c
-            if parent == target_id:
+            if str(parent) == str(target_id):
                 delete_ids.add(cid)
 
-    # 🔥 삭제 실행
-    for user in chat:
+    # 🔥 삭제 실행 (관리자는 전체 삭제 가능)
+    for u in chat:
         new_list = []
-        for c in chat[user]:
+
+        for c in chat[u]:
             cid, parent, content = c
 
-            if cid not in delete_ids:
-                new_list.append(c)
+            if role == "admin":
+                # 🔥 관리자: 무조건 삭제 가능
+                if cid not in delete_ids:
+                    new_list.append(c)
+            else:
+                # 🔥 일반유저: 본인 글만 삭제 가능
+                if u == user and cid not in delete_ids:
+                    new_list.append(c)
 
-        chat[user] = new_list
+        chat[u] = new_list
 
     save_chat(chat)
 
@@ -1057,6 +1205,127 @@ def get_user_events_full():
             })
 
     return jsonify(result)
+
+@app.route("/delete_user", methods=["POST"])
+def delete_user():
+    if session.get("role") != "admin":
+        return jsonify({"success": False}), 403
+
+    data = request.get_json()
+    username = data["username"]
+
+    users = load_users()
+
+    if username in users:
+        del users[username]
+
+    save_users(users)
+
+    return jsonify({"success": True})
+
+
+@app.route("/admin/update_home", methods=["POST"])
+def update_home():
+    if session.get("role") != "admin":
+        return jsonify({"success": False}), 403
+
+    data = request.get_json()
+    part = data.get('part')
+    content = data.get('content')
+
+    file_path = "data/home.json"
+
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            home = json.load(f)
+    else:
+        home = {}
+
+    # 🔥 parts 구조 보장
+    home.setdefault("parts", {})
+    home["parts"].setdefault(str(part), {})
+
+    # 🔥 여기 핵심 (기존 이미지 유지 + 글만 변경)
+    home["parts"][str(part)] = {
+        "text": content,
+        "image": home["parts"][str(part)].get("image", "")
+    }
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(home, f, ensure_ascii=False, indent=4)
+
+    return jsonify({"success": True})
+
+@app.route("/admin/update_notice", methods=["POST"])
+def update_notice():
+    if session.get("role") != "admin":
+        return jsonify({"success": False}), 403
+    
+    data = request.get_json()
+    notice_content = data.get("notice")
+
+    # 파일 경로
+    file_path = "data/home.json"
+    
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            home = json.load(f)
+    else:
+        home = {}
+    
+    # 공지 내용 수정
+    home["notice"] = notice_content
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(home, f, ensure_ascii=False, indent=4)
+    
+    return jsonify({"success": True})
+
+@app.route("/admin/update_intro", methods=["POST"])
+def update_intro():
+    if session.get("role") != "admin":
+        return jsonify({"success": False}), 403
+    
+    data = request.get_json()
+    intro_content = data.get("intro")
+
+    # 파일 경로
+    file_path = "data/home.json"
+    
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            home = json.load(f)
+    else:
+        home = {}
+
+    # 소개 내용 수정
+    home["intro"] = intro_content
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(home, f, ensure_ascii=False, indent=4)
+    
+    return jsonify({"success": True})
+
+@app.route("/admin/update_intro_image", methods=["POST"])
+def update_intro_image():
+    if session.get("role") != "admin":
+        return jsonify({"success": False}), 403
+
+    file = request.files["image"]
+    filename = secure_filename(file.filename)
+
+    path = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(path)
+
+    file_url = f"/static/uploads/{filename}"
+
+    home = load_home()
+    home["intro_image"] = file_url
+
+    with open("data/home.json", "w", encoding="utf-8") as f:
+        json.dump(home, f, ensure_ascii=False, indent=4)
+
+    return jsonify({"success": True})
 
 if __name__ == "__main__":
     app.run(debug=True, use_reloader=False)
