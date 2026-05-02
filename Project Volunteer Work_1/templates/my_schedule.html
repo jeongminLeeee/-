@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>내 일정</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-3xl font-bold text-gray-800 mb-6">📋 내 일정</h1>
+
+<!-- 검색 + 필터 + 정렬 카드 -->
+<div class="bg-white rounded-2xl shadow-lg p-5 mb-6">
+
+    <div class="flex justify-between items-center flex-wrap gap-4">
+
+        <!-- 검색창 -->
+        <div class="relative">
+            <input id="search" placeholder="일정 검색..."
+                class="pl-10 pr-4 py-2 w-80 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                oninput="applyFilters()">
+
+            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor"
+                stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M21 21l-4.3-4.3M10 18a8 8 0 100-16 8 8 0 000 16z" />
+            </svg>
+        </div>
+
+        <!-- 오른쪽 영역 -->
+        <div class="flex gap-3 items-center">
+
+            <!-- 정렬 -->
+            <select id="sort" onchange="applyFilters()" class="border px-4 py-2 rounded shadow">
+
+                <option value="latest">최신순</option>
+                <option value="deadline">마감순</option>
+                <option value="name">이름순</option>
+
+            </select>
+
+            <!-- 필터 -->
+            <div class="relative">
+
+                <button id="filterBtn" onclick="toggleFilter()" class="border px-4 py-2 rounded bg-white shadow">
+                    전체
+                </button>
+
+                <div id="filterBox" class="hidden absolute right-0 mt-2 bg-white border rounded shadow p-3 w-40 z-50">
+
+                    <label class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" value="task" checked>
+                        수행평가
+                    </label>
+
+                    <label class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" value="personal" checked>
+                        개인일정
+                    </label>
+
+                    <label class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" value="event" checked>
+                        학교행사
+                    </label>
+
+                    <button onclick="applyFilters()" class="mt-2 w-full bg-gray-300 px-3 py-1 rounded">
+                        적용
+                    </button>
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- 일정 리스트 -->
+<div id="list" class="space-y-4">
+
+    {% for s in schedules %}
+    <div class="bg-white p-5 rounded-2xl shadow hover:shadow-lg transition flex justify-between items-center"
+        data-type="{{ s.type }}" data-date="{{ s.date }}" data-dday="{{ s.d_day }}" data-title="{{ s.title }}">
+
+        <!-- 왼쪽 -->
+        <div class="flex items-center gap-4">
+
+            <div class="w-4 h-4 rounded-full" style="background: {{ s.color }}"></div>
+
+            <div>
+
+                <p class="text-lg font-bold text-gray-800">
+                    {{ s.title }}
+                </p>
+
+                <p class="text-sm text-gray-500 mt-1">
+                    📅 {{ s.date }}
+                    {% if s.end %}
+                    ~ {{ s.end }}
+                    {% endif %}
+                </p>
+
+                <!-- D-day -->
+                <p class="text-sm font-semibold
+                    {% if s.d_day < 0 %}
+                        text-red-500
+                    {% elif s.d_day == 0 %}
+                        text-orange-500
+                    {% else %}
+                        text-blue-500
+                    {% endif %}">
+
+                    {% if s.d_day > 0 %}
+                    D-{{ s.d_day }}
+                    {% elif s.d_day == 0 %}
+                    D-Day
+                    {% else %}
+                    D+{{ -s.d_day }}
+                    {% endif %}
+
+                </p>
+
+            </div>
+        </div>
+
+        <!-- 오른쪽 버튼 -->
+        <div class="flex gap-2">
+
+
+            {% if s.type == "task" %}
+
+            <a href="/task/{{ s.id }}?from=my_schedule">
+                <button class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg">
+                    자세히 보기
+                </button>
+            </a>
+
+            <button onclick="deleteTask({{ s.id }})"
+                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+                삭제
+            </button>
+
+            {% elif s.type == "event" %}
+
+            <a href="/event/{{ s.id }}?from=my_schedule">
+                <button class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg">
+                    자세히 보기
+                </button>
+            </a>
+
+            <button onclick="deleteEvent('{{ s.id }}')"
+                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+                삭제
+            </button>
+
+            {% else %}
+
+            <button onclick="location.href='/personal_schedule/{{ s.id }}'"
+                class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg">
+                자세히 보기
+            </button>
+
+            <button onclick="deletePersonalSchedule({{ s.id }})"
+                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+                삭제
+            </button>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+    {% endfor %}
+
+</div>
+{% endblock %}
+{% block script %}
+<script>
+
+    // 🔄 드롭다운 필터 토글
+    function toggleFilter() {
+        document
+            .getElementById("filterBox")
+            .classList
+            .toggle("hidden");
+    }
+
+
+    // 🔍 검색 + 항목 필터 + 정렬
+    function applyFilters() {
+
+        const list =
+            document.getElementById("list");
+
+        const checked = Array.from(
+            document.querySelectorAll("#filterBox input:checked")
+        ).map(i => i.value);
+
+        const searchVal =
+            document.getElementById("search")
+                .value
+                .toLowerCase();
+
+        const sortVal =
+            document.getElementById("sort")
+                .value;
+
+        let items = Array.from(
+            document.querySelectorAll("#list > div")
+        );
+
+        // ----------------------
+        // 필터 + 검색
+        // ----------------------
+        items.forEach(item => {
+
+            const type =
+                item.dataset.type;
+
+            const title =
+                item.dataset.title
+                    .toLowerCase();
+
+            const matchesFilter =
+                checked.includes(type);
+
+            const matchesSearch =
+                title.includes(searchVal);
+
+            item.style.display =
+                (matchesFilter && matchesSearch)
+                    ? "flex"
+                    : "none";
+        });
+
+
+        // ----------------------
+        // 정렬
+        // ----------------------
+        let visibleItems =
+            items.filter(item =>
+                item.style.display !== "none"
+            );
+
+        visibleItems.sort((a, b) => {
+
+            const aD = Number(a.dataset.dday);
+            const bD = Number(b.dataset.dday);
+
+            // 🔥 status처럼 그룹 나누기
+            const getGroup = (d) => {
+                if (d === 0) return 0;   // 진행중
+                if (d > 0) return 1;     // 예정
+                return 2;                // 종료 (맨 아래)
+            };
+
+            const gA = getGroup(aD);
+            const gB = getGroup(bD);
+
+            // 🔥 그룹 우선 정렬
+            if (gA !== gB) return gA - gB;
+
+            // ----------------------
+            // 같은 그룹 안에서 정렬
+            // ----------------------
+
+            if (sortVal === "deadline") {
+                return aD - bD;
+            }
+
+            if (sortVal === "name") {
+                return a.dataset.title
+                    .localeCompare(b.dataset.title);
+            }
+
+            return new Date(b.dataset.date)
+                - new Date(a.dataset.date);
+        });
+
+        visibleItems.forEach(item =>
+            list.appendChild(item)
+        );
+
+
+        // ----------------------
+        // 필터 버튼 텍스트
+        // ----------------------
+        const btn =
+            document.getElementById("filterBtn");
+        if (checked.length === 3)
+            btn.innerText = "전체";
+
+        else if (checked.length === 1) {
+            if (checked[0] === "task") btn.innerText = "수행평가";
+            else if (checked[0] === "personal") btn.innerText = "개인일정";
+            else btn.innerText = "학교행사";
+        }
+
+        else
+            btn.innerText = "선택";
+    }
+    function deleteEvent(id) {
+
+        fetch("/remove_event", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                event_id: String(id)
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+    }
+
+
+    // ❌ 개인 일정 삭제
+    function deletePersonalSchedule(id) {
+
+        fetch("/delete_personal_schedule", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ id: id })
+        })
+            .then(res => res.json())
+            .then(data => {
+
+                if (data.success) {
+                    location.reload();
+                }
+
+            })
+            .catch(err => console.error(err));
+    }
+
+
+    // ❌ 수행평가 삭제
+    function deleteTask(id) {
+
+
+        fetch("/delete_task", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ id: id })
+        })
+            .then(res => res.json())
+            .then(data => {
+
+                if (data.success) {
+                    location.reload();
+                }
+
+            })
+            .catch(err => console.error(err));
+    }
+
+    // 🔄 페이지 로드시 자동 적용
+    document.addEventListener("DOMContentLoaded", () => {
+
+        applyFilters();
+
+        const searchInput =
+            document.getElementById("search");
+
+        searchInput?.addEventListener(
+            "keydown",
+            e => {
+                if (e.key === "Enter")
+                    applyFilters();
+            }
+        );
+
+    });
+
+</script>
+{% endblock %}
+
+</html>

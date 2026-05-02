@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Constant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="bg-white p-4 rounded-2xl shadow mb-6">
+    <h2 class="font-bold mb-2">📢 공지</h2>
+
+    {% if session.get("user") == "admin" %}
+    <textarea id="notice-input" class="w-full border p-2 rounded mb-2">{{ home.notice }}</textarea>
+    <button onclick="saveNotice()" class="bg-blue-500 text-white px-3 py-1 rounded">저장</button>
+    {% else %}
+    <p class="text-gray-600">{{ home.notice }}</p>
+    {% endif %}
+</section>
+
+<!-- 사이트 소개 -->
+<section class="bg-white p-4 rounded-2xl shadow mb-6">
+    <h2 class="font-bold mb-4">📚 사이트 소개</h2>
+
+    <div class="flex gap-4">
+
+        <!-- 이미지 -->
+        <div class="w-1/2">
+            {% if home.intro_image %}
+            <img src="{{ home.intro_image }}" class="w-full rounded-lg">
+            {% endif %}
+
+            {% if session.get("user") == "admin" %}
+            <input type="file" onchange="uploadIntroImage(this)" class="mt-2">
+            {% endif %}
+        </div>
+
+        <!-- 텍스트 -->
+        <div class="flex-1">
+            {% if session.get("user") == "admin" %}
+            <textarea id="intro-input" class="w-full border p-2 rounded mb-2">{{ home.intro }}</textarea>
+            <button onclick="saveIntro()" class="bg-blue-500 text-white px-3 py-1 rounded">저장</button>
+            {% else %}
+            <p>{{ home.intro }}</p>
+            {% endif %}
+        </div>
+
+    </div>
+</section>
+
+<!-- 파트 -->
+<section class="flex flex-col gap-6">
+
+    {% for id, part in home.parts.items() %}
+    <div class="bg-white p-6 rounded-2xl shadow">
+
+        {% if session.get("user") == "admin" %}
+
+        <input id="title-{{id}}" value="{{ part.title }}" class="w-full border p-2 mb-2 rounded">
+
+        <input type="file" onchange="uploadImage(this, '{{id}}')" class="mb-2">
+
+        {% if part.image %}
+        <img src="{{ part.image }}" class="w-full mb-2">
+        {% endif %}
+
+        <textarea id="text-{{id}}" class="w-full border p-2 rounded mb-2">{{ part.text }}</textarea>
+
+        <button onclick="savePart('{{id}}')" class="bg-blue-500 text-white px-3 py-1 rounded">저장</button>
+        <button onclick="deletePart('{{id}}')" class="bg-red-500 text-white px-3 py-1 rounded">삭제</button>
+
+        {% else %}
+
+        <h3 class="text-xl font-bold mb-3">📌 {{ part.title }}</h3>
+        {% if part.image %}
+        <img src="{{ part.image }}" class="w-full mb-4">
+        {% endif %}
+        <p>{{ part.text }}</p>
+
+        {% endif %}
+
+    </div>
+    {% endfor %}
+
+    {% if session.get("user") == "admin" %}
+    <button onclick="addPart()" class="bg-green-500 text-white p-3 rounded-xl">
+        + 파트 추가
+    </button>
+    {% endif %}
+
+</section>
+
+{% endblock %}
+
+
+
+{% block script %}
+<script>
+
+    function saveNotice() {
+        const value = document.getElementById("notice-input").value;
+
+        fetch("/admin/update_home", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ section: "notice", value })
+        })
+            .then(res => res.json())
+            .then(() => alert("공지 저장 완료"));
+    }
+
+    function saveIntro() {
+        const value = document.getElementById("intro-input").value;
+
+        fetch("/admin/update_home", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ section: "intro", value })
+        })
+            .then(res => res.json())
+            .then(() => alert("소개 저장 완료"));
+    }
+
+    function savePart(id) {
+        const title = document.getElementById("title-" + id).value;
+        const text = document.getElementById("text-" + id).value;
+
+        fetch("/admin/update_home", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                section: "part_" + id,
+                title,
+                text
+            })
+        })
+            .then(res => res.json())
+            .then(() => alert("파트 저장 완료"));
+    }
+
+    function deletePart(id) {
+        if (!confirm("삭제할래?")) return;
+
+        fetch("/admin/update_home", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ section: "delete_part_" + id })
+        })
+            .then(() => location.reload());
+    }
+
+    function addPart() {
+        fetch("/admin/update_home", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ section: "add_part" })
+        })
+            .then(() => location.reload());
+    }
+
+    function uploadIntroImage(input) {
+        const file = input.files[0];
+        let formData = new FormData();
+        formData.append("file", file);
+
+        fetch("/upload_image", { method: "POST", body: formData })
+            .then(res => res.json())
+            .then(data => {
+                fetch("/admin/update_home", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        section: "intro_image",
+                        image: data.url
+                    })
+                }).then(() => location.reload());
+            });
+    }
+
+    function uploadImage(input, id) {
+        const file = input.files[0];
+        let formData = new FormData();
+        formData.append("file", file);
+
+        fetch("/upload_image", { method: "POST", body: formData })
+            .then(res => res.json())
+            .then(data => {
+                fetch("/admin/update_home", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        section: "part_" + id,
+                        image: data.url
+                    })
+                }).then(() => location.reload());
+            });
+    }
+
+</script>
+{% endblock %}
+
+</html>

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Constant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+    <!-- Header -->
+    <header class="bg-gray-400 shadow-sm p-4 flex justify-between items-center">
+        <h1 class="text-3xl font-bold">Constant</h1>
+    </header>
+
+    <div class="flex relative">
+
+        <!-- 🔥 사이드바 -->
+        <aside id="sidebar"
+            class="w-64 bg-white p-4 shadow-md min-h-screen sticky top-0 transition-all duration-300 ease-in-out relative">
+
+            <button onclick="toggleSidebar()"
+                class="absolute -right-4 top-1/2 -translate-y-1/2 bg-gray-400 hover:bg-gray-600 text-white w-8 h-12 rounded-md flex items-center justify-center shadow">
+                ‹‹
+            </button>
+
+            <div id="sidebarContent">
+                <div class="flex flex-col items-center gap-3 mt-3">
+                    {% if session.get("user") %}
+                    <!-- 프로필 이미지 -->
+                    <img id="profileImg" src="/static/{{ profile.get(session['user'], 'daesang_1.png') }}"
+                        class="w-20 h-20 rounded-full cursor-pointer border-2 border-gray-300"
+                        onclick="openProfileSelect()" />
+
+                    <p class="font-semibold">{{ session['user'] }}</p>
+
+                    <a href="/logout">
+                        <button class="bg-red-500 text-white px-6 py-2 rounded-lg w-40">
+                            로그아웃
+                        </button>
+                    </a>
+                    {% else %}
+                    <a href="/login">
+                        <button class="bg-blue-500 text-white px-6 py-2 rounded-lg w-40">
+                            로그인
+                        </button>
+                    </a>
+                    <a href="/signup">
+                        <button class="bg-gray-200 px-6 py-2 rounded-lg w-40">
+                            회원가입
+                        </button>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <nav class="mt-6 border-t border-gray-400 pt-4">
+                    <ul class="space-y-3 text-gray-700">
+                        <a href="/">
+                            <li li class="mt-4 font-bold cursor-pointer hover:text-blue-500">🏠 홈</li>
+                        </a>
+                        <li class="font-bold">📅 일정표</li>
+                        <a href="/tasks">
+                            <li>- 수행평가</li>
+                        </a>
+                        <a href="/school_event">
+                            <li>- 주요행사</li>
+                        </a>
+                        <li class="font-bold">📝 나의 일정 관리</li>
+                        <a href="/my_calendar">
+                            <li>- 나의 캘린더</li>
+                        </a>
+                        <a href="/my_schedule">
+                            <li>- 나의 일정</li>
+                        </a>
+                        <a href="/chat">
+                            <li class="mt-4 font-bold cursor-pointer hover:text-blue-500">
+                                ⭐ 피드백
+                            </li>
+                        </a>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="flex-1 p-8 transition-all duration-300 ease-in-out">
+
+            <h1 class="text-2xl font-bold mb-6">✏️ 수행평가 안내</h1>
+
+            <!-- 필터 -->
+            <div class="flex flex-wrap items-center gap-3 mb-6">
+
+                <!-- 학년 -->
+                <select id="gradeFilter" class="border px-3 py-2 rounded">
+                    <option value="전체">학년</option>
+                    <option value="1">1학년</option>
+                    <option value="2">2학년</option>
+                </select>
+
+                <!-- 검색 기준 -->
+                <select id="searchType" class="border px-3 py-2 rounded">
+                    <option value="subject">과목</option>
+                    <option value="title">이름</option>
+                    <option value="class">반</option>
+                </select>
+
+                <!-- 검색창 -->
+                <input id="searchInput" type="text" placeholder="검색..." class="border px-3 py-2 rounded w-48">
+
+                <!-- 오른쪽 정렬 -->
+                <div class="ml-auto">
+                    <select id="sortSelect" class="border px-3 py-2 rounded">
+                        <option value="">최신 등록순</option>
+                        <option value="deadline">마감 임박순</option>
+                        <option value="name">이름순</option>
+                    </select>
+                </div>
+                {% if session.get("user") == "admin" %}
+                <button onclick="openAddTaskModal()" class="bg-blue-500 text-white px-3 py-2 rounded ml-2">
+                    + 수행 추가
+                </button>
+                {% endif %}
+
+            </div>
+
+            <!-- 리스트 -->
+            <div class="space-y-4">
+                {% if tasks|length == 0 %}
+                <p class="text-gray-500">등록된 수행평가가 없습니다.</p>
+                {% endif %}
+
+                {% for t in tasks %}
+                <div class="task-item bg-white p-5 rounded-2xl shadow flex justify-between items-center"
+                    data-subject="{{ t.subject }}" data-title="{{ t.title }}" data-class="{{ t.class }}"
+                    data-grade="{{ t.grade }}" data-dday="{{ t.d_day }}">
+
+                    <div>
+                        <h2 class="text-lg font-bold">{{ t.title }}</h2>
+                        <p class="text-gray-500">{{ t.grade }}학년 {{ t.class }}반</p>
+
+                        <p class="
+                        {% if t.d_day < 0 %} text-blue-400 font-semibold
+                        {% elif t.d_day == 0 %} text-red-500 font-bold
+                        {% elif t.d_day == 1 %} text-red-400 font-semibold
+                        {% elif t.d_day <= 3 %} text-orange-400
+                        {% else %} text-gray-400
+                        {% endif %}
+                        ">
+
+                            {% if t.d_day < 0 %} ⏱ D+{{ t.d_day | abs }} {% elif t.d_day==0 %} 🔥 D-Day {% else %} ⏳
+                                D-{{ t.d_day }} {% endif %} </p>
+
+                                <p class="login-msg text-red-500 text-sm"></p>
+                    </div>
+
+                    <div class="flex gap-2 items-start">
+
+                        <a href="/task/{{ t.id }}?from=tasks">
+                            <button class="bg-gray-300 px-3 py-1 rounded">
+                                자세히 보기
+                            </button>
+                        </a>
+
+                        <button onclick="toggleCalendar({{ t.id }}, this)" data-id="{{ t.id }}"
+                            class="calendar-btn bg-green-500 text-white px-3 py-1 rounded">
+                            캘린더 추가
+                        </button>
+
+                        {% if session.get("user") == "admin" %}
+
+                        <button onclick="deleteTask({{ t.id }})" class="bg-red-500 text-white px-3 py-1 rounded">
+                            삭제
+                        </button>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+                {% endfor %}
+
+            </div>
+            {% if session.get("user") == "admin" %}
+            <div id="taskModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center">
+                <div class="bg-white p-6 rounded-lg w-96">
+
+                    <h2 class="text-xl font-bold mb-4">수행평가 추가</h2>
+
+                    <input id="grade" placeholder="학년" class="border p-2 w-full mb-2">
+                    <input id="class" placeholder="반" class="border p-2 w-full mb-2">
+                    <input id="subject" placeholder="과목" class="border p-2 w-full mb-2">
+                    <input id="title" placeholder="제목" class="border p-2 w-full mb-2">
+                    <input id="date" type="date" class="border p-2 w-full mb-2">
+                    <textarea id="context" placeholder="내용" class="border p-2 w-full mb-2"></textarea>
+                    <div class="mb-2">
+                        <label class="font-bold">이미지</label>
+
+                        <div id="fileList" class="space-y-2 mt-2"></div>
+
+                        <button type="button" onclick="addFileInput()" class="bg-gray-200 px-3 py-1 rounded w-full">
+                            + 파일 추가
+                        </button>
+                    </div>
+                    <button onclick="submitTask()" class="bg-blue-500 text-white px-4 py-2 rounded w-full">
+                        추가
+                    </button>
+
+                    <button onclick="closeAddTaskModal()" class="mt-2 bg-gray-300 px-4 py-2 rounded w-full">
+                        닫기
+                    </button>
+
+                </div>
+            </div>
+            {% endif %}
+            <!-- 🔥 수정 모달 -->
+
+
+        </main>
+    </div>
+    {% if session.get("user") %}
+    <div id="profileModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg flex flex-col items-center gap-4">
+            <h2 class="text-xl font-bold mb-2">프로필 선택</h2>
+            <div class="flex gap-4">
+                <img src="/static/daesang_1.png" class="w-20 h-20 rounded-full cursor-pointer"
+                    onclick="selectProfile('daesang_1.png')">
+                <img src="/static/daesang_2.png" class="w-20 h-20 rounded-full cursor-pointer"
+                    onclick="selectProfile('daesang_2.png')">
+                <img src="/static/daesang_3.png" class="w-20 h-20 rounded-full cursor-pointer"
+                    onclick="selectProfile('daesang_3.png')">
+            </div>
+            <button onclick="closeProfileModal()" class="mt-4 px-4 py-2 bg-gray-300 rounded">취소</button>
+        </div>
+    </div>
+
+    {% endif %}
+
+    <!-- 🔥 사이드바 JS -->
+    <script>
+        let isOpen = true;
+        function toggleSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("sidebarContent");
+            const button = sidebar.querySelector("button");
+
+            if (isOpen) {
+                sidebar.style.width = "60px";
+                content.style.display = "none";
+                button.innerHTML = "››";
+            } else {
+                sidebar.style.width = "256px";
+                content.style.display = "block";
+                button.innerHTML = "‹‹";
+            }
+
+            isOpen = !isOpen;
+        }
+
+        function openProfileSelect() {
+            document.getElementById("profileModal").classList.remove("hidden");
+        }
+
+        function closeProfileModal() {
+            document.getElementById("profileModal").classList.add("hidden");
+        }
+
+        function selectProfile(imgName) {
+            fetch("/update_profile", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ "img": imgName })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById("profileImg").src = "/static/" + imgName;
+                        closeProfileModal();
+                    } else {
+                        alert(data.msg || "프로필 업데이트 실패");
+                    }
+                });
+        }
+
+        function openAddTask() {
+            const title = prompt("제목");
+            const subject = prompt("과목");
+            const grade = prompt("학년");
+            const cls = prompt("반");
+            const date = prompt("마감일 (YYYY-MM-DD)");
+            const context = prompt("내용");
+
+            fetch("/admin/add_task", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title,
+                    subject,
+                    grade,
+                    class: cls,
+                    date,
+                    context
+                })
+            }).then(() => location.reload());
+        }
+
+
+
+
+        function deleteTask(id) {
+            if (!confirm("삭제할까요?")) return;
+
+            fetch("/admin/delete_task", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id })
+            }).then(() => location.reload());
+        }
+    </script>
+
+
+    <!-- 기존 기능 -->
+    <script>
+        let userTasks = [];
+
+        // 🔥 요소 가져오기
+        const gradeFilter = document.getElementById("gradeFilter");
+        const searchType = document.getElementById("searchType");
+        const searchInput = document.getElementById("searchInput");
+        const sortSelect = document.getElementById("sortSelect");
+
+        const container = document.querySelector(".space-y-4");
+
+        // 🔥 유저 캘린더 상태 불러오기
+        fetch("/get_user_tasks")
+            .then(res => res.json())
+            .then(data => {
+                userTasks = data.tasks;
+                let userTaskIds = userTasks.map(t => t.id.toString());
+
+                document.querySelectorAll(".calendar-btn").forEach(btn => {
+                    let id = btn.dataset.id;
+                    if (userTaskIds.includes(id)) {
+                        btn.innerText = "추가 취소";
+                        btn.classList.remove("bg-green-500");
+                        btn.classList.add("bg-red-500");
+                    }
+                });
+            });
+
+        // 🔥 캘린더 토글
+        function toggleCalendar(taskId, btn) {
+            if (btn.innerText === "캘린더 추가") {
+                fetch("/add_task", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ task_id: taskId })
+                })
+                    .then(res => {
+                        if (res.status === 401) { showLoginMessage(btn); return null; }
+                        return res.json();
+                    })
+                    .then(data => {
+                        if (!data) return;
+                        btn.innerText = "추가 취소";
+                        btn.classList.remove("bg-green-500");
+                        btn.classList.add("bg-red-500");
+                    });
+            } else {
+                fetch("/remove_task", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ task_id: taskId })
+                });
+
+                btn.innerText = "캘린더 추가";
+                btn.classList.remove("bg-red-500");
+                btn.classList.add("bg-green-500");
+            }
+        }
+
+        function showLoginMessage(btn) {
+            let msg = btn.parentElement.parentElement.querySelector(".login-msg");
+            msg.innerText = "로그인 후 이용하시오";
+            setTimeout(() => { msg.innerText = ""; }, 2000);
+        }
+
+        // 🔥 필터 + 검색 + 정렬
+        function filterTasks() {
+            const items = document.querySelectorAll(".task-item");
+
+            const grade = gradeFilter.value;
+            const type = searchType.value;
+            const keyword = searchInput.value.toLowerCase();
+
+            items.forEach(item => {
+                let match = true;
+
+                // 학년 필터
+                if (grade !== "전체" && item.dataset.grade !== grade) {
+                    match = false;
+                }
+
+                // 검색 필터
+                if (keyword) {
+                    const value = (item.dataset[type] || "").toLowerCase();
+                    if (!value.includes(keyword)) {
+                        match = false;
+                    }
+                }
+
+                item.style.display = match ? "flex" : "none";
+            });
+
+            sortTasks();
+        }
+
+        function sortTasks() {
+            const items = Array.from(document.querySelectorAll(".task-item"));
+            const type = sortSelect.value;
+
+            const sorted = items.sort((a, b) => {
+
+                const ddayA = Number(a.dataset.dday);
+                const ddayB = Number(b.dataset.dday);
+
+                // 🔥 1. 지난 일정은 무조건 아래로
+                const isPastA = ddayA < 0;
+                const isPastB = ddayB < 0;
+
+                if (isPastA && !isPastB) return 1;
+                if (!isPastA && isPastB) return -1;
+
+                // 🔥 2. 둘 다 같은 상태면 기존 정렬 적용
+
+                if (type === "deadline") {
+                    return ddayA - ddayB;
+                }
+
+                if (type === "name") {
+                    return a.dataset.title.localeCompare(b.dataset.title);
+                }
+
+                // 🔥 최신순 (기본)
+                const dateA = new Date(a.dataset.date);
+                const dateB = new Date(b.dataset.date);
+
+                return dateB - dateA;
+            });
+
+            sorted.forEach(el => container.appendChild(el));
+        }
+
+        // 🔥 이벤트 연결 (실시간)
+
+        function openAddTaskModal() {
+            document.getElementById("taskModal").classList.remove("hidden");
+        }
+
+        function closeAddTaskModal() {
+            document.getElementById("taskModal").classList.add("hidden");
+        }
+
+
+        async function submitTask() {
+
+            const formData = new FormData();
+
+            formData.append("grade", document.getElementById("grade").value);
+            formData.append("class", document.getElementById("class").value);
+            formData.append("subject", document.getElementById("subject").value);
+            formData.append("title", document.getElementById("title").value);
+            formData.append("date", document.getElementById("date").value);
+            formData.append("context", document.getElementById("context").value);
+
+            // 🔥 여러 파일 수집
+            const inputs = document.querySelectorAll(".file-input");
+
+            inputs.forEach(input => {
+                if (input.files[0]) {
+                    formData.append("images", input.files[0]);
+                }
+            });
+
+            const res = await fetch("/admin/add_task", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                alert("추가 완료");
+                location.reload();
+            } else {
+                alert("실패");
+            }
+        }
+
+
+        function addFileInput() {
+            const fileList = document.getElementById("fileList");
+
+            const row = document.createElement("div");
+            row.className = "flex items-center gap-2";
+
+            row.innerHTML = `
+                <input type="file" class="file-input border p-1 w-full">
+                <button type="button" class="bg-red-500 text-white px-2 py-1 rounded"
+                    onclick="this.parentElement.remove()">
+                    삭제
+                </button>
+            `;
+
+            fileList.appendChild(row);
+        }
+
+
+
+
+
+
+        gradeFilter.addEventListener("change", filterTasks);
+        searchType.addEventListener("change", filterTasks);
+        searchInput.addEventListener("input", filterTasks);
+        sortSelect.addEventListener("change", filterTasks);
+    </script>
+
+</body>
+
+</html>
